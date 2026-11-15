@@ -92,6 +92,12 @@ input,textarea,select{font-size:16px}
 .lugar{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
 .lugar:first-of-type{border-top:0}
 .tb{display:grid;grid-template-columns:78px 1fr 24px;align-items:center;gap:8px;margin:7px 0;font-size:15px}.tb i{display:block;height:12px;border-radius:8px;background:var(--line);overflow:hidden}.tb u{display:block;height:100%;background:var(--acc);border-radius:8px;min-width:0}.tb b{text-align:right}
+.chip svg.mini{width:22px;height:30px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;flex:none}
+.chip.on svg.mini{fill:rgba(255,255,255,.25)}
+.prow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+.prow:first-of-type{border-top:0}
+.prow svg{width:22px;height:30px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;flex:none}
+.prow span.n{flex:1;font-size:16px}
 .hide{display:none}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style>
@@ -121,6 +127,8 @@ var LS = {
   set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 };
 var rows = [];
+var misPalas = [];
+var pEdit = null;
 var editRow = null;
 var charts = {};
 var FORMAS = ['Redonda','Lágrima','Diamante','Híbrida'];
@@ -139,20 +147,21 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return
 
 function dbOpen(){
   return new Promise(function(res,rej){
-    var q=indexedDB.open('padel-diario',1);
-    q.onupgradeneeded=function(){q.result.createObjectStore('partidos',{keyPath:'id',autoIncrement:true})};
+    var q=indexedDB.open('padel-diario',2);
+    q.onupgradeneeded=function(){var d=q.result; if(!d.objectStoreNames.contains('partidos'))d.createObjectStore('partidos',{keyPath:'id',autoIncrement:true}); if(!d.objectStoreNames.contains('palas'))d.createObjectStore('palas',{keyPath:'id',autoIncrement:true})};
     q.onsuccess=function(){DB=q.result;res()}; q.onerror=function(){rej(q.error)};
   });
 }
-function tx(mode,fn){
+function tx(mode,fn,store){
+  store=store||'partidos';
   return new Promise(function(res,rej){
-    var t=DB.transaction('partidos',mode),s=t.objectStore('partidos'),r=fn(s);
+    var t=DB.transaction(store,mode),s=t.objectStore(store),r=fn(s);
     t.oncomplete=function(){res(r&&r.result)}; t.onerror=function(){rej(t.error)}; t.onabort=function(){rej(t.error)};
   });
 }
-function dbAll(){return tx('readonly',function(s){return s.getAll()})}
-function dbPut(o){return tx('readwrite',function(s){return s.put(o)})}
-function dbDel(id){return tx('readwrite',function(s){return s.delete(id)})}
+function dbAll(st){return tx('readonly',function(s){return s.getAll()},st)}
+function dbPut(o,st){return tx('readwrite',function(s){return s.put(o)},st)}
+function dbDel(id,st){return tx('readwrite',function(s){return s.delete(id)},st)}
 function dbClear(){return tx('readwrite',function(s){return s.clear()})}
 
 function status(msg,cls){ $('#status').innerHTML = msg?'<div class="bar '+cls+'">'+msg+'</div>':''; }
@@ -165,7 +174,8 @@ function backupInfo(){
   return '';
 }
 function load(){
-  return dbAll().then(function(r){
+  return Promise.all([dbAll(),dbAll('palas')]).then(function(x){
+    var r=x[0]; misPalas=x[1];
     rows=r.map(function(x){x.row=x.id;return x});
     var w=backupInfo();
     status(w?('📁 '+w):'','warn');
@@ -273,8 +283,15 @@ var STEP={
     bigBtn('res','Victoria','✅','Victoria',f.resultado)+bigBtn('res','Derrota','❌','Derrota',f.resultado)+'</div>'},
   marcador:function(){return '<div class="q">¿Marcador?</div><div class="hint">Opcional. Ej. 6-4 3-6 7-5</div><input id="marcador" placeholder="6-4 3-6 7-5" value="'+esc(f.marcador)+'">'+nextBtn('Siguiente')},
   pala:function(){
+    var mp=misPalas.filter(function(p){return p.activa!==false});
+    if(mp.length){
+      var nombres=mp.map(function(p){return p.nombre});
+      return '<div class="q">¿Con qué pala?</div><div class="hint">Toca una de tus palas</div><div class="big" style="margin-bottom:12px">'+
+        mp.map(function(p){return '<button type="button" class="chip'+(f.pala===p.nombre?' on':'')+'" data-a="mipala" data-v="'+p.id+'">'+(SHAPES[p.forma]?'<svg class="mini" viewBox="0 0 40 56"><path d="'+SHAPES[p.forma]+'"/><path d="M20 38 V54"/></svg>':'<em>🎾</em>')+'<span>'+esc(p.nombre)+'</span></button>'}).join('')+'</div>'+
+        '<input id="pala" placeholder="Otra pala (prestada, nueva…)" value="'+(nombres.indexOf(f.pala)>=0?'':esc(f.pala))+'">'+nextBtn('Usar esta otra pala');
+    }
     var rec=freq('pala');
-    return '<div class="q">¿Con qué pala?</div><div class="hint">'+(rec.length?'Toca una de tus palas o escribe otra':'Escribe el nombre de la pala')+'</div>'+
+    return '<div class="q">¿Con qué pala?</div><div class="hint">'+(rec.length?'Toca una de tus palas o escribe otra':'Escribe el nombre de la pala')+'. Consejo: guarda tus palas en ⚙️ Ajustes → Mis palas.</div>'+
       (rec.length?'<div class="big" style="margin-bottom:12px">'+rec.map(function(p){return bigBtn('palachip',p,'🎾',p,f.pala)}).join('')+'</div>':'')+
       '<input id="pala" placeholder="'+(rec.length?'Otra pala…':'Ej. Bullpadel Vertex')+'" value="'+(rec.indexOf(f.pala)>=0?'':esc(f.pala))+'">'+nextBtn()},
   forma:function(){return '<div class="q">¿Qué forma tiene?</div><div class="hint">Toca la forma</div>'+shapes(f.forma).replace(/data-k="forma"/g,'data-a="forma"')},
@@ -332,6 +349,7 @@ function act(a,v,n){
     if(last&&last.forma){f.forma=last.forma;wiz.auto=true}
     return nextStep();
   }
+  if(a==='mipala'){ var mp=misPalas.filter(function(p){return String(p.id)===String(v)})[0]; if(!mp)return; f.pala=mp.nombre; if(mp.forma){f.forma=mp.forma;wiz.auto=true} return nextStep(); }
   if(a==='forma'){ f.forma=v; wiz.auto=false; return nextStep(); }
   if(a==='pista'){ f.pista=v; return nextStep(); }
   if(a==='dur'){ f.duracion=+v; return nextStep(); }
@@ -457,19 +475,68 @@ function renderRep(){
   mk('c4',{type:'bar',data:{labels:keys,datasets:[{label:'Partidos',backgroundColor:G,data:keys.map(function(k){return ms[k][0]})},{label:'Entrenos',backgroundColor:B,data:keys.map(function(k){return ms[k][1]})}]},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}}});
 }
 
+function palasCfgHtml(){
+  var act=misPalas.filter(function(p){return p.activa!==false}), arch=misPalas.filter(function(p){return p.activa===false});
+  var h='<div class="card"><h3>🎾 Mis palas</h3>';
+  if(pEdit){
+    h+='<div class="sub">'+(pEdit.id?'Editar pala':'Nueva pala')+'</div>'+
+      '<label class="l">Nombre</label><input id="pn" placeholder="Ej. Bullpadel Vertex" value="'+esc(pEdit.nombre)+'">'+
+      '<label class="l">Forma</label>'+shapes(pEdit.forma).replace(/data-k="forma"/g,'data-a="pform"')+
+      (pEdit.id?'<div class="sub" style="margin-top:8px">Si cambias el nombre, se actualiza también en tus partidos anteriores.</div>':'')+
+      '<button class="btn" data-a="psave">Guardar pala</button><button class="btn sec" data-a="pcancel">Cancelar</button>'+
+      (pEdit.id?'<button class="btn del" data-a="parch">Archivar (dejo de usarla)</button>':'');
+    return h+'</div>';
+  }
+  h+='<div class="sub">Las palas que guardes aquí salen como botones al registrar un partido o entrenamiento.</div>';
+  h+=act.length?act.map(function(p){return '<div class="prow" data-a="pedit" data-v="'+p.id+'">'+(SHAPES[p.forma]?'<svg viewBox="0 0 40 56"><path d="'+SHAPES[p.forma]+'"/><path d="M20 38 V54"/></svg>':'<span>🎾</span>')+'<span class="n">'+esc(p.nombre)+'<br><small style="color:var(--mut)">'+esc(p.forma||'sin forma')+'</small></span><span class="chev">›</span></div>'}).join(''):'<div class="sub">Todavía no has guardado ninguna.</div>';
+  var have={}; misPalas.forEach(function(p){have[p.nombre.toLowerCase()]=1});
+  var falta=freq('pala').filter(function(n){return !have[n.toLowerCase()]});
+  rows.forEach(function(r){if(r.pala&&!have[r.pala.toLowerCase()]&&falta.indexOf(r.pala)<0)falta.push(r.pala)});
+  h+='<button class="btn" data-a="padd">+ Añadir pala</button>';
+  if(falta.length) h+='<button class="btn sec" data-a="pimport">Añadir las que ya has usado ('+falta.length+'): '+esc(falta.slice(0,3).join(', '))+(falta.length>3?'…':'')+'</button>';
+  if(arch.length) h+='<div class="sub" style="margin-top:12px">Archivadas (toca para recuperar)</div><div class="chips">'+arch.map(function(p){return '<button type="button" class="chip" data-a="punarch" data-v="'+p.id+'">'+esc(p.nombre)+'</button>'}).join('')+'</div>';
+  return h+'</div>';
+}
+function grabP(){var e=document.getElementById('pn'); if(e&&pEdit) pEdit.nombre=e.value}
+function cfgAct(a,v){
+  if(a==='padd'){pEdit={id:null,nombre:'',forma:''};return renderCfg()}
+  if(a==='pedit'){var p=misPalas.filter(function(x){return String(x.id)===String(v)})[0]; if(!p)return; pEdit={id:p.id,nombre:p.nombre,forma:p.forma||'',old:p.nombre}; return renderCfg()}
+  if(a==='pform'){grabP(); pEdit.forma=v; return renderCfg()}
+  if(a==='pcancel'){pEdit=null; return renderCfg()}
+  if(a==='psave'){
+    grabP(); var n=(pEdit.nombre||'').trim();
+    if(!n) return status('⚠️ Escribe el nombre de la pala.','warn');
+    if(!pEdit.forma) return status('⚠️ Elige la forma de la pala.','warn');
+    var dup=misPalas.some(function(x){return x.id!==pEdit.id&&x.nombre.toLowerCase()===n.toLowerCase()});
+    if(dup) return status('⚠️ Ya tienes una pala con ese nombre.','warn');
+    var o={nombre:n,forma:pEdit.forma,activa:true}; if(pEdit.id)o.id=pEdit.id;
+    var old=pEdit.old;
+    return dbPut(o,'palas').then(function(){
+      if(old&&old!==n){return rows.filter(function(r){return r.pala===old}).reduce(function(p,r){var c=Object.assign({},r);delete c.row;c.pala=n;return p.then(function(){return dbPut(c)})},Promise.resolve())}
+    }).then(function(){pEdit=null;status('✅ Pala guardada','ok');return load()});
+  }
+  if(a==='parch'){var q=misPalas.filter(function(x){return x.id===pEdit.id})[0]; if(!q)return; return dbPut(Object.assign({},q,{activa:false}),'palas').then(function(){pEdit=null;return load()})}
+  if(a==='punarch'){var u=misPalas.filter(function(x){return String(x.id)===String(v)})[0]; if(!u)return; return dbPut(Object.assign({},u,{activa:true}),'palas').then(load)}
+  if(a==='pimport'){
+    var have={}; misPalas.forEach(function(p){have[p.nombre.toLowerCase()]=1});
+    var nombres=[]; rows.slice().sort(function(a,b){return String(b.fecha).localeCompare(String(a.fecha))}).forEach(function(r){if(r.pala&&!have[r.pala.toLowerCase()]){have[r.pala.toLowerCase()]=1;nombres.push(r)}});
+    return nombres.reduce(function(p,r){return p.then(function(){return dbPut({nombre:r.pala,forma:r.forma||'',activa:true},'palas')})},Promise.resolve()).then(function(){status('✅ Añadidas '+nombres.length+' palas. Revisa que la forma sea correcta.','ok');return load()});
+  }
+}
 function renderCfg(){
   var lb=LS.get('padel_backup',{n:0,t:''});
-  $('#v-cfg').innerHTML='<div class="card"><h3>📁 Copia en tu móvil</h3>'+
-    '<div class="sub">Guarda un archivo con todo tu historial en la app <b>Archivos</b> del iPhone. Es tu garantía de que nunca pierdes nada.</div>'+
+  $('#v-cfg').innerHTML=palasCfgHtml()+'<div class="card"><h3>📁 Copia en tu móvil</h3>'+
+    '<div class="sub">Guarda un archivo con todo tu historial y tus palas en la app <b>Archivos</b> del iPhone. Es tu garantía de que nunca pierdes nada.</div>'+
     '<button class="btn" id="bk">Guardar copia en Archivos</button>'+
     '<div class="sub" style="margin-top:8px">'+(lb.t?'Última copia: '+esc(lb.t)+' ('+lb.n+' partidos)':'Todavía no hay copia.')+'</div></div>'+
-    '<div class="card"><h3>♻️ Restaurar copia</h3><div class="sub">Elige un archivo <b>padel-diario.json</b>. Se añaden los partidos que falten.</div>'+
+    '<div class="card"><h3>♻️ Restaurar copia</h3><div class="sub">Elige un archivo <b>padel-diario.json</b>. Se añaden los partidos y palas que falten.</div>'+
     '<input type="file" id="rf" accept=".json,application/json"></div>'+
     '<div class="card"><h3>Estado</h3><div class="sub">Partidos guardados: '+rows.length+'<br>Almacenamiento permanente: '+(persisted===true?'sí ✅':persisted===false?'no concedido (usa la copia)':'comprobando…')+'</div></div>';
+  var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
 function exportar(){
-  var data=JSON.stringify({app:'padel-diario',version:1,partidos:rows.map(function(r){var o=Object.assign({},r);delete o.row;return o})},null,1);
+  var data=JSON.stringify({app:'padel-diario',version:2,partidos:rows.map(function(r){var o=Object.assign({},r);delete o.row;return o}),palas:misPalas.map(function(p){return {nombre:p.nombre,forma:p.forma,activa:p.activa!==false}})},null,1);
   var stamp=new Date().toISOString().slice(0,10);
   var file=new File([data],'padel-diario-'+stamp+'.json',{type:'application/json'});
   function done(){LS.set('padel_backup',{n:rows.length,t:new Date().toLocaleString('es-ES')});status('','');load();}
@@ -486,7 +553,11 @@ function importar(ev){
     var sig=function(r){return [r.fecha,r.pala,r.tipo,r.duracion,r.control,r.potencia,r.comodidad,r.fisico,r.creado].join('|')};
     var have={}; rows.forEach(function(r){have[sig(r)]=1});
     var add=list.filter(function(r){return !have[sig(r)]});
-    return add.reduce(function(p,r){var o=Object.assign({},r);delete o.id;delete o.row;return p.then(function(){return dbPut(o)})},Promise.resolve()).then(function(){status('✅ Restaurados '+add.length+' partidos','ok');return load()});
+    var hp={}; misPalas.forEach(function(p){hp[p.nombre.toLowerCase()]=1});
+    var addP=(j.palas||[]).filter(function(p){return p&&p.nombre&&!hp[p.nombre.toLowerCase()]});
+    return add.reduce(function(p,r){var o=Object.assign({},r);delete o.id;delete o.row;return p.then(function(){return dbPut(o)})},Promise.resolve())
+      .then(function(){return addP.reduce(function(p,x){return p.then(function(){return dbPut({nombre:x.nombre,forma:x.forma||'',activa:x.activa!==false},'palas')})},Promise.resolve())})
+      .then(function(){status('✅ Restaurados '+add.length+' partidos y '+addP.length+' palas','ok');return load()});
   }).catch(function(e){status('Archivo no válido: '+esc(e.message),'err')});
 }
 

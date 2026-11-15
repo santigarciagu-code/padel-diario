@@ -529,9 +529,17 @@ function renderCfg(){
     '<div class="sub" style="margin-top:8px">'+(lb.t?'Última copia: '+esc(lb.t)+' ('+lb.n+' partidos)':'Todavía no hay copia.')+'</div></div>'+
     '<div class="card"><h3>♻️ Restaurar copia</h3><div class="sub">Elige un archivo <b>padel-diario.json</b>. Se añaden los partidos y palas que falten.</div>'+
     '<input type="file" id="rf" accept=".json,application/json"></div>'+
-    '<div class="card"><h3>Estado</h3><div class="sub">Partidos guardados: '+rows.length+'<br>Almacenamiento permanente: '+(persisted===true?'sí ✅':persisted===false?'no concedido (usa la copia)':'comprobando…')+'</div></div>';
+    '<div class="card"><h3>Estado</h3><div class="sub">Versión de la app: '+VERSION+'<br>Partidos guardados: '+rows.length+'<br>Almacenamiento permanente: '+(persisted===true?'sí ✅':persisted===false?'no concedido (usa la copia)':'comprobando…')+'</div><button class="btn sec" id="upd">Actualizar la app</button><div class="sub" style="margin-top:6px">Descarga la última versión. Tus partidos y palas no se tocan.</div></div>';
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
-  $('#bk').onclick=exportar; $('#rf').onchange=importar;
+  $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
+}
+var VERSION='v10';
+function actualizar(){
+  status('Actualizando…','ok');
+  var p=[];
+  if(navigator.serviceWorker) p.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}));
+  if(window.caches) p.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}));
+  Promise.all(p).then(function(){location.replace(location.pathname+'?u='+Date.now())});
 }
 function exportar(){
   var data=JSON.stringify({app:'padel-diario',version:2,partidos:rows.map(function(r){var o=Object.assign({},r);delete o.row;return o}),palas:misPalas.map(function(p){return {nombre:p.nombre,forma:p.forma,activa:p.activa!==false}})},null,1);
@@ -564,7 +572,7 @@ function render(){
   renderNew(); renderHist(); renderRep(); renderCfg();
 }
 init();
-if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){}); var rl=false; navigator.serviceWorker.addEventListener('controllerchange',function(){ if(rl||!navigator.serviceWorker.controller)return; rl=true; });}
 </script>
 </body>
 </html>

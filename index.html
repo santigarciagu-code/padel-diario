@@ -16,7 +16,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1712;--card:#18231b;--ink:#e8f1ea;--mut:#93a597;--line:#26362b;--acc:#3ecf7b;--acc2:#1c3326;--bad:#ff7a7a;--warn:#f0b35a}}
 :root[data-theme="dark"]{--bg:#0f1712;--card:#18231b;--ink:#e8f1ea;--mut:#93a597;--line:#26362b;--acc:#3ecf7b;--acc2:#1c3326;--bad:#ff7a7a;--warn:#f0b35a}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,system-ui,sans-serif;padding:0 16px 96px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,system-ui,sans-serif;padding:env(safe-area-inset-top) 16px 110px}
 h1{font-size:22px;margin:18px 0 4px}
 .sub{color:var(--mut);font-size:13px;margin-bottom:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0}
@@ -28,7 +28,7 @@ textarea{min-height:70px}
 .chip{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:10px 14px;font:inherit;cursor:pointer}
 .chip.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
 .tipo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.tipo .chip{border-radius:14px;text-align:center;padding:14px 6px}
+.tipo .chip{border-radius:14px;text-align:center;padding:12px 2px;font-size:14px;min-width:0}
 .scale{display:flex;gap:6px}
 .scale .chip{flex:1;padding:10px 0;font-size:22px;border-radius:12px;text-align:center}
 .btn{width:100%;border:0;background:var(--acc);color:#fff;font:600 17px inherit;border-radius:14px;padding:15px;margin-top:16px;cursor:pointer}
@@ -49,6 +49,15 @@ nav button.on{color:var(--acc);font-weight:600}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
 .kpi b{display:block;font-size:24px}.kpi span{font-size:12px;color:var(--mut)}
 canvas{max-height:240px}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;height:48px;line-height:1.2;text-align:left;padding:0 12px}
+input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.3em;margin:0}
+input[type=date]::-webkit-datetime-edit{padding:0}
+input,textarea,select{font-size:16px}
+.shapes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.opt{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:10px 2px 8px;font:inherit;font-size:12px;cursor:pointer;text-align:center}
+.opt svg{display:block;margin:0 auto 4px;width:34px;height:48px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.opt.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.opt.on svg{fill:rgba(255,255,255,.22)}
 .hide{display:none}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style>
@@ -144,6 +153,12 @@ function show(v){
 }
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){ if(b.dataset.v==='new'&&editRow===null) f=blank(); show(b.dataset.v)}});
 
+var SHAPES={Redonda:"M20 3 C31 3 36 12 36 20 C36 29 29 38 20 38 C11 38 4 29 4 20 C4 12 9 3 20 3Z",Lágrima:"M20 3 C34 3 36 18 28 30 L20 38 L12 30 C4 18 6 3 20 3Z",Diamante:"M20 2 L36 24 L20 38 L4 24Z",Híbrida:"M20 3 C32 3 35 14 33 22 C31 30 26 38 20 38 C14 38 9 30 7 22 C5 14 8 3 20 3Z"};
+function shapes(cur){
+  return '<div class="shapes">'+FORMAS.map(function(n){
+    return '<button type="button" class="opt'+(cur===n?' on':'')+'" data-k="forma" data-v="'+n+'"><svg viewBox="0 0 40 56"><path d="'+SHAPES[n]+'"/><path d="M20 38 V54"/></svg>'+n+'</button>';
+  }).join('')+'</div>';
+}
 function chips(name,list,cur,cls){
   return '<div class="'+(cls||'chips')+'">'+list.map(function(x){
     return '<button type="button" class="chip'+(String(cur)===String(x)?' on':'')+'" data-k="'+name+'" data-v="'+esc(x)+'">'+esc(x)+'</button>';
@@ -180,7 +195,7 @@ function renderNew(){
     }
     h+='<div class="card"><h3>Pala y pista</h3>'+
       '<label class="l">Pala usada</label><input id="pala" list="dl" placeholder="Ej. Bullpadel Vertex" value="'+esc(f.pala)+'"><datalist id="dl">'+palas().map(function(p){return '<option value="'+esc(p)+'">'}).join('')+'</datalist>'+
-      '<label class="l">Forma</label>'+chips('forma',FORMAS,f.forma)+
+      '<label class="l">Forma</label>'+shapes(f.forma)+
       '<label class="l">Pista</label>'+chips('pista',['Interior','Exterior'],f.pista)+
       '<label class="l">Duración (min)</label>'+chips('duracion',DUR,f.duracion)+'</div>'+
       '<div class="card"><h3>Sensaciones</h3>'+

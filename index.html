@@ -91,6 +91,7 @@ input,textarea,select{font-size:16px}
 .mb span:last-child{text-align:right;color:var(--ink)}
 .lugar{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
 .lugar:first-of-type{border-top:0}
+.tb{display:grid;grid-template-columns:78px 1fr 24px;align-items:center;gap:8px;margin:7px 0;font-size:15px}.tb i{display:block;height:12px;border-radius:8px;background:var(--line);overflow:hidden}.tb u{display:block;height:100%;background:var(--acc);border-radius:8px;min-width:0}.tb b{text-align:right}
 .hide{display:none}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style>
@@ -397,6 +398,11 @@ function palasHtml(g){
       mbar('Control',d.c)+mbar('Potencia',d.po)+mbar('Comodidad',d.co)+mbar('Físico',d.fi)+'</div>';
   }).join('')+'</div>';
 }
+function trabBars(cnt,n){
+  var ks=TRAB.slice().sort(function(a,b){return cnt[b]-cnt[a]});
+  var mx=Math.max.apply(null,ks.map(function(k){return cnt[k]}))||1;
+  return ks.map(function(k){return '<div class="tb"><span>'+k+'</span><i><u style="width:'+Math.round(100*cnt[k]/mx)+'%"></u></i><b>'+cnt[k]+'</b></div>'}).join('');
+}
 function entrenoHtml(){
   var t=rows.filter(function(r){return r.tipo==='Entrenamiento'});
   if(!t.length) return '<div class="card"><h3>🏋️ Entrenamientos</h3><div class="sub" style="margin:0">Todavía no has registrado entrenamientos.</div></div>';
@@ -408,7 +414,7 @@ function entrenoHtml(){
   var hrs=t.reduce(function(a,r){return a+(+r.duracion||0)},0)/60;
   return '<div class="card"><h3>🏋️ Entrenamientos</h3>'+
     '<div class="kpis" style="margin-bottom:12px"><div class="kpi"><b>'+t.length+'</b><span>sesiones</span></div><div class="kpi"><b>'+hrs.toFixed(1)+'</b><span>horas</span></div><div class="kpi"><b>'+lk.length+'</b><span>lugares</span></div></div>'+
-    '<div class="sub" style="margin:0 0 6px">Qué has trabajado</div><div style="position:relative;height:'+(TRAB.length*34+30)+'px"><canvas id="c5" style="max-height:none"></canvas></div>'+
+    '<div class="sub" style="margin:0 0 6px">Qué has trabajado</div>'+trabBars(cnt,t.length)+
     (sin.length&&sin.length<TRAB.length?'<div class="bar warn" style="margin-top:12px">Aún sin trabajar: <b>'+sin.join(', ')+'</b></div>':'')+
     '<div class="sub" style="margin:14px 0 4px">Dónde entrenas</div>'+lk.map(function(k){return '<div class="lugar"><span>'+esc(k)+'</span><b>'+lug[k]+'</b></div>'}).join('')+'</div>';
 }
@@ -435,10 +441,6 @@ function renderRep(){
   var ms={}; rows.forEach(function(r){var m=String(r.fecha).slice(0,7); if(!m)return; ms[m]=ms[m]||[0,0]; ms[m][r.tipo==='Entrenamiento'?1:0]++});
   var keys=Object.keys(ms).sort();
   mk('c4',{type:'bar',data:{labels:keys,datasets:[{label:'Partidos',backgroundColor:G,data:keys.map(function(k){return ms[k][0]})},{label:'Entrenos',backgroundColor:B,data:keys.map(function(k){return ms[k][1]})}]},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}}});
-  (function(){var t=rows.filter(function(r){return r.tipo==='Entrenamiento'}); var el=document.getElementById('c5'); if(!el)return;
-    var cnt={};TRAB.forEach(function(k){cnt[k]=0});t.forEach(function(r){String(r.trabajado||'').split(',').forEach(function(x){x=x.trim();if(x in cnt)cnt[x]++})});
-    var ks=TRAB.slice().sort(function(a,b){return cnt[b]-cnt[a]});
-    mk('c5',{type:'bar',data:{labels:ks,datasets:[{label:'Veces',backgroundColor:B,data:ks.map(function(k){return cnt[k]})}]},options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{autoSkip:false}},x:{beginAtZero:true,ticks:{precision:0}}}}});})();
 }
 
 function renderCfg(){

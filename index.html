@@ -132,7 +132,7 @@ var DB=null, persisted=null;
 
 function blank(){
   var d=new Date(); var iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  return {fecha:iso,pala:'',forma:'',pista:'',duracion:90,control:0,potencia:0,comodidad:0,fisico:0,tipo:'',resultado:'',marcador:'',lugar:'',trabajado:[],con:'',notas:''};
+  return {fecha:iso,pala:'',forma:'',pista:'',duracion:90,control:3,potencia:3,comodidad:3,fisico:3,tipo:'',resultado:'',marcador:'',lugar:'',trabajado:[],con:'',notas:''};
 }
 function $(s){return document.querySelector(s)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -239,13 +239,19 @@ function backStep(){
   if(wiz.review&&editRow===null){wiz.review=false;renderNew();return}
   if(wiz.i>0){wiz.i--; if(stepsFor()[wiz.i]==='forma'&&wiz.auto&&wiz.i>0)wiz.i--; wiz.review=false; renderNew(); window.scrollTo(0,0)}
 }
+function lastRow(){
+  return rows.slice().sort(function(a,b){return String(b.fecha).localeCompare(String(a.fecha))||((b.id||0)-(a.id||0))})[0];
+}
 function resetWiz(){wiz={i:0,review:false,edit:null,auto:false,sure:false}}
 
 function bigBtn(a,v,icon,label,cur){return '<button type="button" class="chip'+(cur===v?' on':'')+'" data-a="'+a+'" data-v="'+esc(v)+'">'+(icon?'<em>'+icon+'</em>':'')+esc(label||v)+'</button>'}
 function nextBtn(label,dis){return '<button class="btn" data-a="next"'+(dis?' disabled':'')+'>'+(label||'Siguiente')+'</button>'}
 
 var STEP={
-  tipo:function(){return ['<div class="q">¿Qué has jugado?</div><div class="hint">Toca una opción</div><div class="big">',
+  tipo:function(){
+    var l=editRow?null:lastRow();
+    var rep=l?'<button type="button" class="chip" data-a="repeat" style="width:100%;border-radius:16px;padding:14px 16px;text-align:left;margin-bottom:14px;background:var(--acc2);border-color:var(--acc);color:var(--ink)"><b>⚡ Repetir el último</b><br><span style="color:var(--mut);font-size:14px">'+esc([l.tipo,l.pala,l.pista,l.duracion?l.duracion+' min':''].filter(Boolean).join(' · '))+'</span></button>':'';
+    return [rep+'<div class="q">¿Qué has jugado?</div><div class="hint">Toca una opción</div><div class="big">',
     bigBtn('tipo','Competición','🏆','Competición',f.tipo),bigBtn('tipo','Amistoso','🤝','Amistoso',f.tipo),bigBtn('tipo','Entrenamiento','🏋️','Entrenamiento',f.tipo),'</div>'].join('')},
   fecha:function(){
     var opts=[[0,'Hoy'],[1,'Ayer'],[2,'Anteayer']];
@@ -272,19 +278,19 @@ var STEP={
       (rec.length?'<div class="big" style="margin-bottom:12px">'+rec.map(function(p){return bigBtn('palachip',p,'🎾',p,f.pala)}).join('')+'</div>':'')+
       '<input id="pala" placeholder="'+(rec.length?'Otra pala…':'Ej. Bullpadel Vertex')+'" value="'+(rec.indexOf(f.pala)>=0?'':esc(f.pala))+'">'+nextBtn()},
   forma:function(){return '<div class="q">¿Qué forma tiene?</div><div class="hint">Toca la forma</div>'+shapes(f.forma).replace(/data-k="forma"/g,'data-a="forma"')},
-  pista:function(){return '<div class="q">¿Qué pista?</div><div class="big two">'+bigBtn('pista','Interior','🏟️','Interior',f.pista)+bigBtn('pista','Exterior','☀️','Exterior',f.pista)+'</div>'},
-  duracion:function(){return '<div class="q">¿Cuánto duró?</div><div class="hint">Minutos</div><div class="chips">'+DUR.map(function(d){return '<button type="button" class="chip'+(f.duracion===d?' on':'')+'" data-a="dur" data-v="'+d+'" style="padding:16px 20px;font-size:18px">'+d+'</button>'}).join('')+'</div>'},
+  pista:function(){return '<div class="q">¿Qué pista?</div><div class="big two">'+bigBtn('pista','Interior','🏟️','Interior',f.pista)+bigBtn('pista','Exterior','☀️','Exterior',f.pista)+'</div>'+(f.pista?nextBtn('Seguir con '+f.pista):'')},
+  duracion:function(){return '<div class="q">¿Cuánto duró?</div><div class="hint">Minutos</div><div class="chips">'+DUR.map(function(d){return '<button type="button" class="chip'+(f.duracion===d?' on':'')+'" data-a="dur" data-v="'+d+'" style="padding:16px 20px;font-size:18px">'+d+'</button>'}).join('')+'</div>'+nextBtn('Seguir con '+f.duracion+' min')},
   sens:function(){
     var names=[['control','Control'],['potencia','Potencia'],['comodidad','Comodidad / brazo'],['fisico','Estado físico']];
     var ok=names.every(function(n){return f[n[0]]>0});
-    return '<div class="q">¿Qué sensaciones tuviste?</div><div class="hint">Puntúa de 😖 a 🤩</div>'+names.map(function(n){
+    return '<div class="q">¿Qué sensaciones tuviste?</div><div class="hint">Empiezan en 😐. Toca solo las que cambien</div>'+names.map(function(n){
       return '<div class="sens"><div class="nm"><span>'+n[1]+'</span></div><div class="scale">'+[1,2,3,4,5].map(function(k){return '<button type="button" class="chip'+(f[n[0]]===k?' on':'')+'" data-a="sc" data-n="'+n[0]+'" data-v="'+k+'">'+EMO[k-1]+'</button>'}).join('')+'</div></div>'}).join('')+nextBtn('Siguiente',!ok)},
   extra:function(){return '<div class="q">¿Algo más?</div><div class="hint">Todo opcional</div><label class="l">Con quién</label><input id="con" value="'+esc(f.con)+'"><label class="l">Notas</label><textarea id="notas" placeholder="Qué funcionó, qué no…">'+esc(f.notas)+'</textarea>'+nextBtn('Revisar')},
   review:function(){
     var tr=f.tipo==='Entrenamiento';
     var L=[['tipo','Tipo',f.tipo],['fecha','Fecha',fechaBonita(f.fecha)]];
     if(tr){L.push(['lugar','Lugar',f.lugar],['trabajo','Trabajado',f.trabajado.join(', ')||'—'])}
-    else{L.push(['resultado','Resultado',f.resultado],['marcador','Marcador',f.marcador||'—'])}
+    else{L.push(['resultado','Resultado',f.resultado||'⚠️ Falta'],['marcador','Marcador',f.marcador||'—'])}
     L.push(['pala','Pala',f.pala],['forma','Forma',f.forma||'—'],['pista','Pista',f.pista||'—'],['duracion','Duración',f.duracion+' min'],
       ['sens','Sensaciones','Control '+EMO[f.control-1]+' · Potencia '+EMO[f.potencia-1]+' · Comodidad '+EMO[f.comodidad-1]+' · Físico '+EMO[f.fisico-1]],
       ['extra','Extra',[f.con,f.notas].filter(Boolean).join(' · ')||'—']);
@@ -309,7 +315,15 @@ function renderNew(){
 }
 function act(a,v,n){
   if(a==='back') return backStep();
-  if(a==='tipo'){ f.tipo=v; if(v==='Entrenamiento'){f.resultado='';f.marcador=''}else{f.lugar='';f.trabajado=[]} return nextStep(); }
+  if(a==='repeat'){
+    var l=lastRow(); if(!l) return;
+    f=Object.assign(blank(),{tipo:l.tipo,pala:l.pala,forma:l.forma,pista:l.pista,duracion:+l.duracion||90,lugar:l.tipo==='Entrenamiento'?(l.lugar||''):'',trabajado:l.tipo==='Entrenamiento'?String(l.trabajado||'').split(',').map(function(x){return x.trim()}).filter(Boolean):[]});
+    resetWiz(); wiz.review=true; status('⚡ Copiado del último. Pon el resultado y cambia lo que haga falta.','ok'); renderNew(); window.scrollTo(0,0); return;
+  }
+  if(a==='tipo'){
+    var l0=editRow?null:lastRow();
+    if(l0&&!f.pista){f.pista=l0.pista||'';f.duracion=+l0.duracion||f.duracion}
+    f.tipo=v; if(v==='Entrenamiento'){f.resultado='';f.marcador=''}else{f.lugar='';f.trabajado=[]} return nextStep(); }
   if(a==='dia'){ f.fecha=v; return nextStep(); }
   if(a==='res'){ f.resultado=v; return nextStep(); }
   if(a==='lugarchip'){ f.lugar=v; return nextStep(); }

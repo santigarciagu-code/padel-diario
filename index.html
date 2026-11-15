@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Diario de Pádel</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pádel">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1f9d55">
+<style>
+:root{--bg:#f4f7f2;--card:#fff;--ink:#16241a;--mut:#6b7a6f;--line:#dfe8dc;--acc:#1f9d55;--acc2:#e8f6ed;--bad:#d64545;--warn:#b7791f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1712;--card:#18231b;--ink:#e8f1ea;--mut:#93a597;--line:#26362b;--acc:#3ecf7b;--acc2:#1c3326;--bad:#ff7a7a;--warn:#f0b35a}}
+:root[data-theme="dark"]{--bg:#0f1712;--card:#18231b;--ink:#e8f1ea;--mut:#93a597;--line:#26362b;--acc:#3ecf7b;--acc2:#1c3326;--bad:#ff7a7a;--warn:#f0b35a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,system-ui,sans-serif;padding:0 16px 96px}
+h1{font-size:22px;margin:18px 0 4px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0}
+.card h3{margin:0 0 10px;font-size:15px}
+label.l{display:block;font-size:13px;color:var(--mut);margin:12px 0 6px}
+input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px}
+textarea{min-height:70px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:10px 14px;font:inherit;cursor:pointer}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.tipo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tipo .chip{border-radius:14px;text-align:center;padding:14px 6px}
+.scale{display:flex;gap:6px}
+.scale .chip{flex:1;padding:10px 0;font-size:22px;border-radius:12px;text-align:center}
+.btn{width:100%;border:0;background:var(--acc);color:#fff;font:600 17px inherit;border-radius:14px;padding:15px;margin-top:16px;cursor:pointer}
+.btn.sec{background:var(--acc2);color:var(--acc)}
+.btn.del{background:transparent;color:var(--bad);border:1px solid var(--bad)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav button{flex:1;border:0;background:none;color:var(--mut);font:12px inherit;padding:6px;cursor:pointer}
+nav button b{display:block;font-size:20px;font-weight:400}
+nav button.on{color:var(--acc);font-weight:600}
+.bar{padding:10px 12px;border-radius:12px;font-size:13px;margin:10px 0}
+.bar.ok{background:var(--acc2);color:var(--acc)}.bar.err{background:#fde7e7;color:#a12626}.bar.warn{background:#fff3dc;color:#8a5a00}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+.row:first-child{border-top:0}
+.row small{color:var(--mut)}
+.pill{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--acc2);color:var(--acc);white-space:nowrap}
+.pill.d{background:#fde7e7;color:#a12626}.pill.t{background:#e8eefc;color:#2f4fa8}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+.kpi b{display:block;font-size:24px}.kpi span{font-size:12px;color:var(--mut)}
+canvas{max-height:240px}
+.hide{display:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+</style>
+</head>
+<body>
+<h1>🎾 Diario de Pádel</h1>
+<div class="sub" id="sub"></div>
+<div id="status"></div>
+
+<section id="v-new"></section>
+<section id="v-hist" class="hide"></section>
+<section id="v-rep" class="hide"></section>
+<section id="v-cfg" class="hide"></section>
+
+<nav>
+  <button data-v="new" class="on"><b>➕</b>Nuevo</button>
+  <button data-v="hist"><b>📒</b>Historial</button>
+  <button data-v="rep"><b>📊</b>Informes</button>
+  <button data-v="cfg"><b>⚙️</b>Ajustes</button>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ---------- almacenamiento: IndexedDB en el móvil + copia en archivo ----------
+var LS = {
+  get:function(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+var rows = [];
+var editRow = null;
+var charts = {};
+var FORMAS = ['Redonda','Lágrima','Diamante','Híbrida'];
+var TRAB = ['Saque','Volea','Bandeja','Víbora','Remate','Pared','Globo','Físico','Táctica'];
+var DUR = [45,60,90,120,150];
+var EMO = ['😖','😕','😐','🙂','🤩'];
+var f = blank();
+var DB=null, persisted=null;
+
+function blank(){
+  var d=new Date(); var iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  return {fecha:iso,pala:'',forma:'',pista:'',duracion:90,control:0,potencia:0,comodidad:0,fisico:0,tipo:'',resultado:'',marcador:'',lugar:'',trabajado:[],con:'',notas:''};
+}
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+function dbOpen(){
+  return new Promise(function(res,rej){
+    var q=indexedDB.open('padel-diario',1);
+    q.onupgradeneeded=function(){q.result.createObjectStore('partidos',{keyPath:'id',autoIncrement:true})};
+    q.onsuccess=function(){DB=q.result;res()}; q.onerror=function(){rej(q.error)};
+  });
+}
+function tx(mode,fn){
+  return new Promise(function(res,rej){
+    var t=DB.transaction('partidos',mode),s=t.objectStore('partidos'),r=fn(s);
+    t.oncomplete=function(){res(r&&r.result)}; t.onerror=function(){rej(t.error)}; t.onabort=function(){rej(t.error)};
+  });
+}
+function dbAll(){return tx('readonly',function(s){return s.getAll()})}
+function dbPut(o){return tx('readwrite',function(s){return s.put(o)})}
+function dbDel(id){return tx('readwrite',function(s){return s.delete(id)})}
+function dbClear(){return tx('readwrite',function(s){return s.clear()})}
+
+function status(msg,cls){ $('#status').innerHTML = msg?'<div class="bar '+cls+'">'+msg+'</div>':''; }
+function backupInfo(){
+  var lb=LS.get('padel_backup',{n:0,t:''});
+  var sin=rows.length-lb.n;
+  if(!rows.length) return '';
+  if(!lb.t) return 'Aún no has guardado ninguna copia en Archivos. Ve a ⚙️ Ajustes.';
+  if(sin>=3) return 'Llevas '+sin+' partidos sin copia. Guarda una copia en ⚙️ Ajustes.';
+  return '';
+}
+function load(){
+  return dbAll().then(function(r){
+    rows=r.map(function(x){x.row=x.id;return x});
+    var w=backupInfo();
+    status(w?('📁 '+w):'','warn');
+    render();
+  });
+}
+function init(){
+  dbOpen().then(function(){
+    if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().then(function(p){persisted=p;render()})}
+    return load();
+  }).catch(function(e){status('No puedo usar el almacenamiento del móvil: '+esc(e&&e.message||e),'err')});
+}
+
+// ---------- vistas ----------
+function show(v){
+  ['new','hist','rep','cfg'].forEach(function(x){$('#v-'+x).classList.toggle('hide',x!==v)});
+  document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});
+  render();
+}
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){ if(b.dataset.v==='new'&&editRow===null) f=blank(); show(b.dataset.v)}});
+
+function chips(name,list,cur,cls){
+  return '<div class="'+(cls||'chips')+'">'+list.map(function(x){
+    return '<button type="button" class="chip'+(String(cur)===String(x)?' on':'')+'" data-k="'+name+'" data-v="'+esc(x)+'">'+esc(x)+'</button>';
+  }).join('')+'</div>';
+}
+function scale(name){
+  return '<div class="scale">'+[1,2,3,4,5].map(function(n){
+    return '<button type="button" class="chip'+(f[name]===n?' on':'')+'" data-k="'+name+'" data-v="'+n+'">'+EMO[n-1]+'</button>';
+  }).join('')+'</div>';
+}
+function palas(){
+  var s={}; rows.forEach(function(r){if(r.pala)s[r.pala]=1}); return Object.keys(s);
+}
+
+function renderNew(){
+  var tr=f.tipo==='Entrenamiento';
+  var h='<div class="card"><h3>'+(editRow?'✏️ Editando partido':'¿Qué has jugado?')+'</h3>'+
+    '<div class="tipo">'+['Competición','Amistoso','Entrenamiento'].map(function(t){
+      var ic={'Competición':'🏆','Amistoso':'🤝','Entrenamiento':'🏋️'}[t];
+      return '<button type="button" class="chip'+(f.tipo===t?' on':'')+'" data-k="tipo" data-v="'+t+'">'+ic+'<br>'+t+'</button>';
+    }).join('')+'</div>'+
+    '<label class="l">Fecha</label><input type="date" id="fecha" value="'+f.fecha+'">'+
+    '</div>';
+  if(f.tipo){
+    if(tr){
+      h+='<div class="card"><h3>Entrenamiento</h3><label class="l">¿Dónde ha sido?</label><input id="lugar" placeholder="Club, pista o academia" value="'+esc(f.lugar)+'">'+
+        '<label class="l">¿Qué has trabajado?</label><div class="chips">'+TRAB.map(function(t){
+          return '<button type="button" class="chip'+(f.trabajado.indexOf(t)>=0?' on':'')+'" data-t="'+t+'">'+t+'</button>';}).join('')+'</div></div>';
+    } else {
+      h+='<div class="card"><h3>Resultado</h3>'+
+        '<div class="tipo" style="grid-template-columns:1fr 1fr">'+['Victoria','Derrota'].map(function(t){
+          return '<button type="button" class="chip'+(f.resultado===t?' on':'')+'" data-k="resultado" data-v="'+t+'">'+(t==='Victoria'?'✅ ':'❌ ')+t+'</button>';}).join('')+'</div>'+
+        '<label class="l">Marcador (opcional)</label><input id="marcador" placeholder="6-4 3-6 7-5" value="'+esc(f.marcador)+'"></div>';
+    }
+    h+='<div class="card"><h3>Pala y pista</h3>'+
+      '<label class="l">Pala usada</label><input id="pala" list="dl" placeholder="Ej. Bullpadel Vertex" value="'+esc(f.pala)+'"><datalist id="dl">'+palas().map(function(p){return '<option value="'+esc(p)+'">'}).join('')+'</datalist>'+
+      '<label class="l">Forma</label>'+chips('forma',FORMAS,f.forma)+
+      '<label class="l">Pista</label>'+chips('pista',['Interior','Exterior'],f.pista)+
+      '<label class="l">Duración (min)</label>'+chips('duracion',DUR,f.duracion)+'</div>'+
+      '<div class="card"><h3>Sensaciones</h3>'+
+      '<label class="l">Control</label>'+scale('control')+
+      '<label class="l">Potencia</label>'+scale('potencia')+
+      '<label class="l">Comodidad / brazo</label>'+scale('comodidad')+
+      '<label class="l">Estado físico</label>'+scale('fisico')+'</div>'+
+      '<div class="card"><h3>Extra</h3><label class="l">Con quién (opcional)</label><input id="con" value="'+esc(f.con)+'">'+
+      '<label class="l">Notas</label><textarea id="notas" placeholder="Qué funcionó, qué no…">'+esc(f.notas)+'</textarea></div>'+
+      '<button class="btn" id="save">'+(editRow?'Guardar cambios':'Guardar partido')+'</button>'+
+      (editRow?'<button class="btn sec" id="cancel">Cancelar</button><button class="btn del" id="del">Borrar partido</button>':'');
+  }
+  $('#v-new').innerHTML=h;
+  var m=$('#v-new');
+  m.querySelectorAll('[data-k]').forEach(function(b){b.onclick=function(){grab(); var v=b.dataset.v; f[b.dataset.k]=(['control','potencia','comodidad','fisico','duracion'].indexOf(b.dataset.k)>=0)?+v:v; if(b.dataset.k==='tipo'){ if(v==='Entrenamiento')f.resultado=''; } renderNew();}});
+  m.querySelectorAll('[data-t]').forEach(function(b){b.onclick=function(){grab(); var i=f.trabajado.indexOf(b.dataset.t); if(i>=0)f.trabajado.splice(i,1); else f.trabajado.push(b.dataset.t); renderNew();}});
+  var s=$('#save'); if(s) s.onclick=save;
+  var c=$('#cancel'); if(c) c.onclick=function(){editRow=null;f=blank();show('hist')};
+  var d=$('#del'); if(d) d.onclick=function(){ if(d.dataset.sure){doDelete()} else {d.dataset.sure=1;d.textContent='Pulsa otra vez para confirmar';} };
+}
+function grab(){
+  ['fecha','lugar','marcador','pala','con','notas'].forEach(function(id){var e=document.getElementById(id); if(e) f[id]=e.value;});
+}
+function save(){
+  grab();
+  var err='';
+  if(!f.tipo) err='Elige qué has jugado.';
+  else if(!f.pala) err='Indica la pala.';
+  else if(f.tipo!=='Entrenamiento' && !f.resultado) err='Indica victoria o derrota.';
+  else if(f.tipo==='Entrenamiento' && !f.lugar) err='Indica dónde ha sido el entrenamiento.';
+  else if(!f.control||!f.potencia||!f.comodidad||!f.fisico) err='Puntúa las cuatro sensaciones.';
+  if(err){status('⚠️ '+err,'warn');return;}
+  var datos=Object.assign({},f,{trabajado:f.trabajado.join(', ')});
+  var o=Object.assign({},datos); delete o.row;
+  if(editRow){o.id=editRow} else {o.creado=new Date().toISOString()}
+  var prev=editRow?rows.filter(function(x){return x.id===editRow})[0]:null; if(prev&&prev.creado)o.creado=prev.creado;
+  $('#save').disabled=true; $('#save').textContent='Guardando…';
+  dbPut(o).then(function(){
+    editRow=null; f=blank(); return load();
+  }).then(function(){ show('hist'); status('✅ Guardado en tu móvil','ok'); })
+  .catch(function(e){status('No se pudo guardar: '+esc(e&&e.message||e),'err'); $('#save').disabled=false;});
+}
+function doDelete(){
+  dbDel(editRow).then(function(){editRow=null;f=blank();return load()}).then(function(){show('hist')});
+}
+
+function renderHist(){
+  var list=rows.slice().sort(function(a,b){return String(b.fecha).localeCompare(String(a.fecha))});
+  var h='<div class="card"><h3>Historial ('+rows.length+')</h3>'+(list.length?'':'<div class="sub">Aún no hay partidos.</div>');
+  list.forEach(function(r){
+    var t=r.tipo==='Entrenamiento';
+    var pill=t?'<span class="pill t">Entreno</span>':'<span class="pill'+(r.resultado==='Derrota'?' d':'')+'">'+esc(r.resultado||'')+'</span>';
+    h+='<div class="row" data-row="'+r.row+'"><div><b>'+esc(r.fecha)+'</b> · '+esc(r.pala)+'<br><small>'+esc(r.forma)+' · '+esc(r.pista)+' · '+esc(r.duracion)+' min'+(t&&r.lugar?' · '+esc(r.lugar):'')+(!t&&r.marcador?' · '+esc(r.marcador):'')+'</small></div>'+pill+'</div>';
+  });
+  h+='</div>';
+  $('#v-hist').innerHTML=h;
+  document.querySelectorAll('#v-hist .row').forEach(function(el){el.onclick=function(){
+    var r=rows.filter(function(x){return x.row==el.dataset.row})[0]; if(!r)return;
+    editRow=r.row; f=Object.assign(blank(),r,{trabajado:String(r.trabajado||'').split(',').map(function(s){return s.trim()}).filter(Boolean),fecha:String(r.fecha).slice(0,10)});
+    ['duracion','control','potencia','comodidad','fisico'].forEach(function(k){f[k]=+f[k]||0});
+    show('new');
+  }});
+}
+
+function avg(a){return a.length?a.reduce(function(x,y){return x+(+y||0)},0)/a.length:0}
+function mk(id,cfgc){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),cfgc); }
+function renderRep(){
+  var g=rows.filter(function(r){return r.tipo!=='Entrenamiento'});
+  var w=g.filter(function(r){return r.resultado==='Victoria'}).length;
+  var tr=rows.length-g.length;
+  var hrs=rows.reduce(function(a,r){return a+(+r.duracion||0)},0)/60;
+  var h='<div class="kpis"><div class="kpi"><b>'+g.length+'</b><span>partidos</span></div><div class="kpi"><b>'+(g.length?Math.round(100*w/g.length):0)+'%</b><span>victorias</span></div><div class="kpi"><b>'+hrs.toFixed(1)+'</b><span>horas</span></div></div>'+
+    '<div class="card"><h3>% victorias por forma de pala</h3><canvas id="c1"></canvas></div>'+
+    '<div class="card"><h3>Sensaciones medias por pala</h3><canvas id="c2"></canvas></div>'+
+    '<div class="card"><h3>Victoria vs derrota: sensaciones</h3><canvas id="c3"></canvas></div>'+
+    '<div class="card"><h3>Partidos y entrenos por mes</h3><canvas id="c4"></canvas></div>';
+  $('#v-rep').innerHTML=h;
+  if(!rows.length||typeof Chart==='undefined') return;
+  var ink=getComputedStyle(document.body).color;
+  Chart.defaults.color=ink;
+  var G='#1f9d55',B='#3b6fe0',O='#e0903b',P='#9a57d6';
+  mk('c1',{type:'bar',data:{labels:FORMAS,datasets:[{label:'% victorias',backgroundColor:G,data:FORMAS.map(function(s){var x=g.filter(function(r){return r.forma===s});return x.length?Math.round(100*x.filter(function(r){return r.resultado==='Victoria'}).length/x.length):0})}]},options:{scales:{y:{max:100,beginAtZero:true}},plugins:{legend:{display:false}}}});
+  var pl=palas();
+  mk('c2',{type:'bar',data:{labels:pl,datasets:[['control','Control',G],['potencia','Potencia',B],['comodidad','Comodidad',O],['fisico','Físico',P]].map(function(m){return {label:m[1],backgroundColor:m[2],data:pl.map(function(p){return +avg(rows.filter(function(r){return r.pala===p}).map(function(r){return r[m[0]]})).toFixed(2)})}})},options:{scales:{y:{max:5,beginAtZero:true}}}});
+  var V=g.filter(function(r){return r.resultado==='Victoria'}),D=g.filter(function(r){return r.resultado==='Derrota'});
+  mk('c3',{type:'bar',data:{labels:['Control','Potencia','Comodidad','Físico'],datasets:[{label:'Victoria',backgroundColor:G,data:['control','potencia','comodidad','fisico'].map(function(k){return +avg(V.map(function(r){return r[k]})).toFixed(2)})},{label:'Derrota',backgroundColor:'#d64545',data:['control','potencia','comodidad','fisico'].map(function(k){return +avg(D.map(function(r){return r[k]})).toFixed(2)})}]},options:{scales:{y:{max:5,beginAtZero:true}}}});
+  var ms={}; rows.forEach(function(r){var m=String(r.fecha).slice(0,7); if(!m)return; ms[m]=ms[m]||[0,0]; ms[m][r.tipo==='Entrenamiento'?1:0]++});
+  var keys=Object.keys(ms).sort();
+  mk('c4',{type:'bar',data:{labels:keys,datasets:[{label:'Partidos',backgroundColor:G,data:keys.map(function(k){return ms[k][0]})},{label:'Entrenos',backgroundColor:B,data:keys.map(function(k){return ms[k][1]})}]},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}}});
+}
+
+function renderCfg(){
+  var lb=LS.get('padel_backup',{n:0,t:''});
+  $('#v-cfg').innerHTML='<div class="card"><h3>📁 Copia en tu móvil</h3>'+
+    '<div class="sub">Guarda un archivo con todo tu historial en la app <b>Archivos</b> del iPhone. Es tu garantía de que nunca pierdes nada.</div>'+
+    '<button class="btn" id="bk">Guardar copia en Archivos</button>'+
+    '<div class="sub" style="margin-top:8px">'+(lb.t?'Última copia: '+esc(lb.t)+' ('+lb.n+' partidos)':'Todavía no hay copia.')+'</div></div>'+
+    '<div class="card"><h3>♻️ Restaurar copia</h3><div class="sub">Elige un archivo <b>padel-diario.json</b>. Se añaden los partidos que falten.</div>'+
+    '<input type="file" id="rf" accept=".json,application/json"></div>'+
+    '<div class="card"><h3>Estado</h3><div class="sub">Partidos guardados: '+rows.length+'<br>Almacenamiento permanente: '+(persisted===true?'sí ✅':persisted===false?'no concedido (usa la copia)':'comprobando…')+'</div></div>';
+  $('#bk').onclick=exportar; $('#rf').onchange=importar;
+}
+function exportar(){
+  var data=JSON.stringify({app:'padel-diario',version:1,partidos:rows.map(function(r){var o=Object.assign({},r);delete o.row;return o})},null,1);
+  var stamp=new Date().toISOString().slice(0,10);
+  var file=new File([data],'padel-diario-'+stamp+'.json',{type:'application/json'});
+  function done(){LS.set('padel_backup',{n:rows.length,t:new Date().toLocaleString('es-ES')});status('','');load();}
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:'Copia Diario de Pádel'}).then(done).catch(function(){});
+  } else {
+    var a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();a.remove();done();
+  }
+}
+function importar(ev){
+  var fl=ev.target.files[0]; if(!fl)return;
+  fl.text().then(function(t){
+    var j=JSON.parse(t); var list=j.partidos||[];
+    var sig=function(r){return [r.fecha,r.pala,r.tipo,r.duracion,r.control,r.potencia,r.comodidad,r.fisico,r.creado].join('|')};
+    var have={}; rows.forEach(function(r){have[sig(r)]=1});
+    var add=list.filter(function(r){return !have[sig(r)]});
+    return add.reduce(function(p,r){var o=Object.assign({},r);delete o.id;delete o.row;return p.then(function(){return dbPut(o)})},Promise.resolve()).then(function(){status('✅ Restaurados '+add.length+' partidos','ok');return load()});
+  }).catch(function(e){status('Archivo no válido: '+esc(e.message),'err')});
+}
+
+function render(){
+  $('#sub').textContent='Tus datos se guardan en este móvil';
+  renderNew(); renderHist(); renderRep(); renderCfg();
+}
+init();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+</script>
+</body>
+</html>

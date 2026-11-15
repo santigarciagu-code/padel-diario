@@ -408,7 +408,7 @@ function entrenoHtml(){
   var hrs=t.reduce(function(a,r){return a+(+r.duracion||0)},0)/60;
   return '<div class="card"><h3>🏋️ Entrenamientos</h3>'+
     '<div class="kpis" style="margin-bottom:12px"><div class="kpi"><b>'+t.length+'</b><span>sesiones</span></div><div class="kpi"><b>'+hrs.toFixed(1)+'</b><span>horas</span></div><div class="kpi"><b>'+lk.length+'</b><span>lugares</span></div></div>'+
-    '<div class="sub" style="margin:0 0 6px">Qué has trabajado</div><canvas id="c5"></canvas>'+
+    '<div class="sub" style="margin:0 0 6px">Qué has trabajado</div><div style="position:relative;height:'+(TRAB.length*34+30)+'px"><canvas id="c5" style="max-height:none"></canvas></div>'+
     (sin.length&&sin.length<TRAB.length?'<div class="bar warn" style="margin-top:12px">Aún sin trabajar: <b>'+sin.join(', ')+'</b></div>':'')+
     '<div class="sub" style="margin:14px 0 4px">Dónde entrenas</div>'+lk.map(function(k){return '<div class="lugar"><span>'+esc(k)+'</span><b>'+lug[k]+'</b></div>'}).join('')+'</div>';
 }
@@ -438,7 +438,7 @@ function renderRep(){
   (function(){var t=rows.filter(function(r){return r.tipo==='Entrenamiento'}); var el=document.getElementById('c5'); if(!el)return;
     var cnt={};TRAB.forEach(function(k){cnt[k]=0});t.forEach(function(r){String(r.trabajado||'').split(',').forEach(function(x){x=x.trim();if(x in cnt)cnt[x]++})});
     var ks=TRAB.slice().sort(function(a,b){return cnt[b]-cnt[a]});
-    mk('c5',{type:'bar',data:{labels:ks,datasets:[{label:'Veces',backgroundColor:B,data:ks.map(function(k){return cnt[k]})}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});})();
+    mk('c5',{type:'bar',data:{labels:ks,datasets:[{label:'Veces',backgroundColor:B,data:ks.map(function(k){return cnt[k]})}]},options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{autoSkip:false}},x:{beginAtZero:true,ticks:{precision:0}}}}});})();
 }
 
 function renderCfg(){

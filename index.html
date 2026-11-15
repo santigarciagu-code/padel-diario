@@ -58,6 +58,28 @@ input,textarea,select{font-size:16px}
 .opt svg{display:block;margin:0 auto 4px;width:34px;height:48px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
 .opt.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
 .opt.on svg{fill:rgba(255,255,255,.22)}
+
+.prog{height:6px;background:var(--line);border-radius:6px;overflow:hidden;margin:6px 0 4px}
+.prog i{display:block;height:100%;background:var(--acc);border-radius:6px;transition:width .25s}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--mut);min-height:28px}
+.back{border:0;background:none;color:var(--acc);font:600 15px inherit;padding:4px 0;cursor:pointer}
+.q{font-size:24px;font-weight:700;margin:14px 0 4px}
+.hint{color:var(--mut);font-size:14px;margin:0 0 14px}
+.step{animation:in .22s ease}
+@keyframes in{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+.big{display:flex;flex-direction:column;gap:10px}
+.big .chip{border-radius:16px;padding:18px 16px;font-size:18px;text-align:left;display:flex;align-items:center;gap:12px}
+.big .chip em{font-style:normal;font-size:26px}
+.big.two{flex-direction:row}.big.two .chip{flex:1;justify-content:center}
+.datebtn{position:relative;display:flex;align-items:center;gap:10px;border:1.5px dashed var(--line);border-radius:16px;padding:16px;font-size:17px;margin-top:10px;background:var(--bg)}
+.datebtn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px}
+.sum .row{cursor:pointer}
+.sum .row b{display:block;font-size:12px;color:var(--mut);font-weight:500}
+.sum .row span.v{font-size:16px}
+.chev{color:var(--mut)}
+.btn[disabled]{opacity:.4}
+.sens{margin-bottom:6px}
+.sens .nm{display:flex;justify-content:space-between;font-size:15px;margin:14px 0 6px}
 .hide{display:none}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style>
@@ -151,7 +173,7 @@ function show(v){
   document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});
   render();
 }
-document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){ if(b.dataset.v==='new'&&editRow===null) f=blank(); show(b.dataset.v)}});
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){ show(b.dataset.v)}});
 
 var SHAPES={Redonda:"M20 3 C31 3 36 12 36 20 C36 29 29 38 20 38 C11 38 4 29 4 20 C4 12 9 3 20 3Z",Lágrima:"M20 3 C34 3 36 18 28 30 L20 38 L12 30 C4 18 6 3 20 3Z",Diamante:"M20 2 L36 24 L20 38 L4 24Z",Híbrida:"M20 3 C32 3 35 14 33 22 C31 30 26 38 20 38 C14 38 9 30 7 22 C5 14 8 3 20 3Z"};
 function shapes(cur){
@@ -173,52 +195,133 @@ function palas(){
   var s={}; rows.forEach(function(r){if(r.pala)s[r.pala]=1}); return Object.keys(s);
 }
 
-function renderNew(){
-  var tr=f.tipo==='Entrenamiento';
-  var h='<div class="card"><h3>'+(editRow?'✏️ Editando partido':'¿Qué has jugado?')+'</h3>'+
-    '<div class="tipo">'+['Competición','Amistoso','Entrenamiento'].map(function(t){
-      var ic={'Competición':'🏆','Amistoso':'🤝','Entrenamiento':'🏋️'}[t];
-      return '<button type="button" class="chip'+(f.tipo===t?' on':'')+'" data-k="tipo" data-v="'+t+'">'+ic+'<br>'+t+'</button>';
-    }).join('')+'</div>'+
-    '<label class="l">Fecha</label><input type="date" id="fecha" value="'+f.fecha+'">'+
-    '</div>';
-  if(f.tipo){
-    if(tr){
-      h+='<div class="card"><h3>Entrenamiento</h3><label class="l">¿Dónde ha sido?</label><input id="lugar" placeholder="Club, pista o academia" value="'+esc(f.lugar)+'">'+
-        '<label class="l">¿Qué has trabajado?</label><div class="chips">'+TRAB.map(function(t){
-          return '<button type="button" class="chip'+(f.trabajado.indexOf(t)>=0?' on':'')+'" data-t="'+t+'">'+t+'</button>';}).join('')+'</div></div>';
-    } else {
-      h+='<div class="card"><h3>Resultado</h3>'+
-        '<div class="tipo" style="grid-template-columns:1fr 1fr">'+['Victoria','Derrota'].map(function(t){
-          return '<button type="button" class="chip'+(f.resultado===t?' on':'')+'" data-k="resultado" data-v="'+t+'">'+(t==='Victoria'?'✅ ':'❌ ')+t+'</button>';}).join('')+'</div>'+
-        '<label class="l">Marcador (opcional)</label><input id="marcador" placeholder="6-4 3-6 7-5" value="'+esc(f.marcador)+'"></div>';
-    }
-    h+='<div class="card"><h3>Pala y pista</h3>'+
-      '<label class="l">Pala usada</label><input id="pala" list="dl" placeholder="Ej. Bullpadel Vertex" value="'+esc(f.pala)+'"><datalist id="dl">'+palas().map(function(p){return '<option value="'+esc(p)+'">'}).join('')+'</datalist>'+
-      '<label class="l">Forma</label>'+shapes(f.forma)+
-      '<label class="l">Pista</label>'+chips('pista',['Interior','Exterior'],f.pista)+
-      '<label class="l">Duración (min)</label>'+chips('duracion',DUR,f.duracion)+'</div>'+
-      '<div class="card"><h3>Sensaciones</h3>'+
-      '<label class="l">Control</label>'+scale('control')+
-      '<label class="l">Potencia</label>'+scale('potencia')+
-      '<label class="l">Comodidad / brazo</label>'+scale('comodidad')+
-      '<label class="l">Estado físico</label>'+scale('fisico')+'</div>'+
-      '<div class="card"><h3>Extra</h3><label class="l">Con quién (opcional)</label><input id="con" value="'+esc(f.con)+'">'+
-      '<label class="l">Notas</label><textarea id="notas" placeholder="Qué funcionó, qué no…">'+esc(f.notas)+'</textarea></div>'+
-      '<button class="btn" id="save">'+(editRow?'Guardar cambios':'Guardar partido')+'</button>'+
-      (editRow?'<button class="btn sec" id="cancel">Cancelar</button><button class="btn del" id="del">Borrar partido</button>':'');
-  }
-  $('#v-new').innerHTML=h;
-  var m=$('#v-new');
-  m.querySelectorAll('[data-k]').forEach(function(b){b.onclick=function(){grab(); var v=b.dataset.v; f[b.dataset.k]=(['control','potencia','comodidad','fisico','duracion'].indexOf(b.dataset.k)>=0)?+v:v; if(b.dataset.k==='tipo'){ if(v==='Entrenamiento')f.resultado=''; } renderNew();}});
-  m.querySelectorAll('[data-t]').forEach(function(b){b.onclick=function(){grab(); var i=f.trabajado.indexOf(b.dataset.t); if(i>=0)f.trabajado.splice(i,1); else f.trabajado.push(b.dataset.t); renderNew();}});
-  var s=$('#save'); if(s) s.onclick=save;
-  var c=$('#cancel'); if(c) c.onclick=function(){editRow=null;f=blank();show('hist')};
-  var d=$('#del'); if(d) d.onclick=function(){ if(d.dataset.sure){doDelete()} else {d.dataset.sure=1;d.textContent='Pulsa otra vez para confirmar';} };
+var wiz={i:0,review:false,edit:null,auto:false,sure:false};
+function stepsFor(){
+  return f.tipo==='Entrenamiento'
+    ? ['tipo','fecha','lugar','trabajo','pala','forma','pista','duracion','sens','extra']
+    : ['tipo','fecha','resultado','marcador','pala','forma','pista','duracion','sens','extra'];
 }
+function curStep(){return wiz.edit||(wiz.review?'review':stepsFor()[wiz.i])}
+function freq(field,filter){
+  var c={},o=[]; rows.forEach(function(r){ if(filter&&!filter(r))return; if(r[field]) c[r[field]]=(c[r[field]]||0)+1});
+  Object.keys(c).forEach(function(k){o.push(k)}); o.sort(function(a,b){return c[b]-c[a]}); return o.slice(0,6);
+}
+function isoDay(off){var d=new Date();d.setDate(d.getDate()-off);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+var MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fechaBonita(iso){var p=String(iso).slice(0,10).split('-');return p.length===3?(+p[2])+' '+MES[+p[1]-1]+' '+p[0]:iso}
+
 function grab(){
-  ['fecha','lugar','marcador','pala','con','notas'].forEach(function(id){var e=document.getElementById(id); if(e) f[id]=e.value;});
+  ['lugar','marcador','pala','con','notas'].forEach(function(id){var e=document.getElementById(id); if(e) f[id]=e.value;});
 }
+function nextStep(){
+  grab();
+  if(wiz.edit){wiz.edit=null;renderNew();return}
+  var st=stepsFor(); wiz.i++;
+  if(st[wiz.i]==='forma'&&wiz.auto&&f.forma) wiz.i++;
+  if(wiz.i>=st.length){wiz.review=true;wiz.i=st.length-1}
+  status('',''); renderNew(); window.scrollTo(0,0);
+}
+function backStep(){
+  grab();
+  if(wiz.edit){wiz.edit=null;renderNew();return}
+  if(wiz.review&&editRow===null){wiz.review=false;renderNew();return}
+  if(wiz.i>0){wiz.i--; if(stepsFor()[wiz.i]==='forma'&&wiz.auto&&wiz.i>0)wiz.i--; wiz.review=false; renderNew(); window.scrollTo(0,0)}
+}
+function resetWiz(){wiz={i:0,review:false,edit:null,auto:false,sure:false}}
+
+function bigBtn(a,v,icon,label,cur){return '<button type="button" class="chip'+(cur===v?' on':'')+'" data-a="'+a+'" data-v="'+esc(v)+'">'+(icon?'<em>'+icon+'</em>':'')+esc(label||v)+'</button>'}
+function nextBtn(label,dis){return '<button class="btn" data-a="next"'+(dis?' disabled':'')+'>'+(label||'Siguiente')+'</button>'}
+
+var STEP={
+  tipo:function(){return ['<div class="q">¿Qué has jugado?</div><div class="hint">Toca una opción</div><div class="big">',
+    bigBtn('tipo','Competición','🏆','Competición',f.tipo),bigBtn('tipo','Amistoso','🤝','Amistoso',f.tipo),bigBtn('tipo','Entrenamiento','🏋️','Entrenamiento',f.tipo),'</div>'].join('')},
+  fecha:function(){
+    var opts=[[0,'Hoy'],[1,'Ayer'],[2,'Anteayer']];
+    var known=opts.some(function(o){return isoDay(o[0])===f.fecha});
+    return '<div class="q">¿Cuándo fue?</div><div class="hint">Toca el día</div><div class="big">'+
+      opts.map(function(o){return bigBtn('dia',isoDay(o[0]),'📅',o[1]+' · '+fechaBonita(isoDay(o[0])),f.fecha)}).join('')+'</div>'+
+      '<label class="datebtn"><span>🗓️</span><span>'+(known?'Otra fecha…':'Fecha: <b>'+fechaBonita(f.fecha)+'</b>')+'</span><input type="date" id="fecha" value="'+esc(f.fecha)+'"></label>'+
+      (known?'':nextBtn('Continuar'));
+  },
+  lugar:function(){
+    var rec=freq('lugar',function(r){return r.tipo==='Entrenamiento'});
+    return '<div class="q">¿Dónde ha sido el entrenamiento?</div><div class="hint">Elige uno reciente o escribe otro</div>'+
+      (rec.length?'<div class="chips" style="margin-bottom:12px">'+rec.map(function(p){return '<button type="button" class="chip" data-a="lugarchip" data-v="'+esc(p)+'">'+esc(p)+'</button>'}).join('')+'</div>':'')+
+      '<input id="lugar" placeholder="Club, pista o academia" value="'+esc(f.lugar)+'">'+nextBtn();
+  },
+  trabajo:function(){return '<div class="q">¿Qué has trabajado?</div><div class="hint">Puedes marcar varias</div><div class="chips">'+
+    TRAB.map(function(t){return '<button type="button" class="chip'+(f.trabajado.indexOf(t)>=0?' on':'')+'" data-a="trab" data-v="'+t+'">'+t+'</button>'}).join('')+'</div>'+nextBtn(f.trabajado.length?'Siguiente':'Saltar')},
+  resultado:function(){return '<div class="q">¿Cómo ha ido?</div><div class="hint">Toca el resultado</div><div class="big two">'+
+    bigBtn('res','Victoria','✅','Victoria',f.resultado)+bigBtn('res','Derrota','❌','Derrota',f.resultado)+'</div>'},
+  marcador:function(){return '<div class="q">¿Marcador?</div><div class="hint">Opcional. Ej. 6-4 3-6 7-5</div><input id="marcador" placeholder="6-4 3-6 7-5" value="'+esc(f.marcador)+'">'+nextBtn('Siguiente')},
+  pala:function(){
+    var rec=freq('pala');
+    return '<div class="q">¿Con qué pala?</div><div class="hint">'+(rec.length?'Toca una de tus palas o escribe otra':'Escribe el nombre de la pala')+'</div>'+
+      (rec.length?'<div class="big" style="margin-bottom:12px">'+rec.map(function(p){return bigBtn('palachip',p,'🎾',p,f.pala)}).join('')+'</div>':'')+
+      '<input id="pala" placeholder="'+(rec.length?'Otra pala…':'Ej. Bullpadel Vertex')+'" value="'+(rec.indexOf(f.pala)>=0?'':esc(f.pala))+'">'+nextBtn()},
+  forma:function(){return '<div class="q">¿Qué forma tiene?</div><div class="hint">Toca la forma</div>'+shapes(f.forma).replace(/data-k="forma"/g,'data-a="forma"')},
+  pista:function(){return '<div class="q">¿Qué pista?</div><div class="big two">'+bigBtn('pista','Interior','🏟️','Interior',f.pista)+bigBtn('pista','Exterior','☀️','Exterior',f.pista)+'</div>'},
+  duracion:function(){return '<div class="q">¿Cuánto duró?</div><div class="hint">Minutos</div><div class="chips">'+DUR.map(function(d){return '<button type="button" class="chip'+(f.duracion===d?' on':'')+'" data-a="dur" data-v="'+d+'" style="padding:16px 20px;font-size:18px">'+d+'</button>'}).join('')+'</div>'},
+  sens:function(){
+    var names=[['control','Control'],['potencia','Potencia'],['comodidad','Comodidad / brazo'],['fisico','Estado físico']];
+    var ok=names.every(function(n){return f[n[0]]>0});
+    return '<div class="q">¿Qué sensaciones tuviste?</div><div class="hint">Puntúa de 😖 a 🤩</div>'+names.map(function(n){
+      return '<div class="sens"><div class="nm"><span>'+n[1]+'</span></div><div class="scale">'+[1,2,3,4,5].map(function(k){return '<button type="button" class="chip'+(f[n[0]]===k?' on':'')+'" data-a="sc" data-n="'+n[0]+'" data-v="'+k+'">'+EMO[k-1]+'</button>'}).join('')+'</div></div>'}).join('')+nextBtn('Siguiente',!ok)},
+  extra:function(){return '<div class="q">¿Algo más?</div><div class="hint">Todo opcional</div><label class="l">Con quién</label><input id="con" value="'+esc(f.con)+'"><label class="l">Notas</label><textarea id="notas" placeholder="Qué funcionó, qué no…">'+esc(f.notas)+'</textarea>'+nextBtn('Revisar')},
+  review:function(){
+    var tr=f.tipo==='Entrenamiento';
+    var L=[['tipo','Tipo',f.tipo],['fecha','Fecha',fechaBonita(f.fecha)]];
+    if(tr){L.push(['lugar','Lugar',f.lugar],['trabajo','Trabajado',f.trabajado.join(', ')||'—'])}
+    else{L.push(['resultado','Resultado',f.resultado],['marcador','Marcador',f.marcador||'—'])}
+    L.push(['pala','Pala',f.pala],['forma','Forma',f.forma||'—'],['pista','Pista',f.pista||'—'],['duracion','Duración',f.duracion+' min'],
+      ['sens','Sensaciones','Control '+EMO[f.control-1]+' · Potencia '+EMO[f.potencia-1]+' · Comodidad '+EMO[f.comodidad-1]+' · Físico '+EMO[f.fisico-1]],
+      ['extra','Extra',[f.con,f.notas].filter(Boolean).join(' · ')||'—']);
+    return '<div class="q">'+(editRow?'Editar partido':'Resumen')+'</div><div class="hint">Toca cualquier línea para cambiarla</div><div class="card sum" style="margin-top:0">'+
+      L.map(function(l){return '<div class="row" data-a="edit" data-v="'+l[0]+'"><div><b>'+l[1]+'</b><span class="v">'+esc(l[2])+'</span></div><span class="chev">›</span></div>'}).join('')+'</div>'+
+      '<button class="btn" id="save">'+(editRow?'Guardar cambios':'Guardar partido')+'</button>'+
+      (editRow?'<button class="btn sec" data-a="cancel">Cancelar</button><button class="btn del" data-a="del">'+(wiz.sure?'Pulsa otra vez para confirmar':'Borrar partido')+'</button>':'');
+  }
+};
+
+function renderNew(){
+  var st=curStep(), steps=stepsFor(), n=steps.length;
+  var inReview=st==='review';
+  var pos=wiz.edit?null:(inReview?n:wiz.i+1);
+  var top='<div class="top"><span>'+((wiz.i>0||wiz.edit||(wiz.review&&editRow===null))?'<button class="back" data-a="back">‹ Atrás</button>':'')+'</span><span>'+(inReview||wiz.edit?'':'Paso '+pos+' de '+n)+'</span></div>'+
+    (wiz.edit?'':'<div class="prog"><i style="width:'+Math.round(100*(inReview?n:wiz.i)/n)+'%"></i></div>');
+  $('#v-new').innerHTML=top+'<div class="step" id="stepbox">'+STEP[st]()+'</div>';
+  var m=$('#v-new');
+  m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) act(b.dataset.a,b.dataset.v,b.dataset.n)};
+  var sv=$('#save'); if(sv) sv.onclick=save;
+  var d=document.getElementById('fecha'); if(d&&st==='fecha') d.onchange=function(){ if(d.value){f.fecha=d.value; nextStep()} };
+}
+function act(a,v,n){
+  if(a==='back') return backStep();
+  if(a==='tipo'){ f.tipo=v; if(v==='Entrenamiento'){f.resultado='';f.marcador=''}else{f.lugar='';f.trabajado=[]} return nextStep(); }
+  if(a==='dia'){ f.fecha=v; return nextStep(); }
+  if(a==='res'){ f.resultado=v; return nextStep(); }
+  if(a==='lugarchip'){ f.lugar=v; return nextStep(); }
+  if(a==='palachip'){
+    f.pala=v; var last=rows.filter(function(r){return r.pala===v}).sort(function(x,y){return String(y.fecha).localeCompare(String(x.fecha))})[0];
+    if(last&&last.forma){f.forma=last.forma;wiz.auto=true}
+    return nextStep();
+  }
+  if(a==='forma'){ f.forma=v; wiz.auto=false; return nextStep(); }
+  if(a==='pista'){ f.pista=v; return nextStep(); }
+  if(a==='dur'){ f.duracion=+v; return nextStep(); }
+  if(a==='trab'){ var i=f.trabajado.indexOf(v); if(i>=0)f.trabajado.splice(i,1); else f.trabajado.push(v); return renderNew(); }
+  if(a==='sc'){ f[n]=+v; return renderNew(); }
+  if(a==='edit'){ grab(); wiz.edit=v; return renderNew(); }
+  if(a==='cancel'){ editRow=null; f=blank(); resetWiz(); return show('hist'); }
+  if(a==='del'){ if(wiz.sure){ return doDelete(); } wiz.sure=true; return renderNew(); }
+  if(a==='next'){
+    grab(); var st=curStep();
+    if(st==='lugar'&&!f.lugar.trim()) return status('⚠️ Indica dónde ha sido.','warn');
+    if(st==='pala'){ if(!f.pala.trim()) return status('⚠️ Indica la pala.','warn'); wiz.auto=false; }
+    return nextStep();
+  }
+}
+
 function save(){
   grab();
   var err='';
@@ -234,12 +337,12 @@ function save(){
   var prev=editRow?rows.filter(function(x){return x.id===editRow})[0]:null; if(prev&&prev.creado)o.creado=prev.creado;
   $('#save').disabled=true; $('#save').textContent='Guardando…';
   dbPut(o).then(function(){
-    editRow=null; f=blank(); return load();
+    editRow=null; f=blank(); resetWiz(); return load();
   }).then(function(){ show('hist'); status('✅ Guardado en tu móvil','ok'); })
   .catch(function(e){status('No se pudo guardar: '+esc(e&&e.message||e),'err'); $('#save').disabled=false;});
 }
 function doDelete(){
-  dbDel(editRow).then(function(){editRow=null;f=blank();return load()}).then(function(){show('hist')});
+  dbDel(editRow).then(function(){editRow=null;f=blank();resetWiz();return load()}).then(function(){show('hist')});
 }
 
 function renderHist(){
@@ -256,6 +359,7 @@ function renderHist(){
     var r=rows.filter(function(x){return x.row==el.dataset.row})[0]; if(!r)return;
     editRow=r.row; f=Object.assign(blank(),r,{trabajado:String(r.trabajado||'').split(',').map(function(s){return s.trim()}).filter(Boolean),fecha:String(r.fecha).slice(0,10)});
     ['duracion','control','potencia','comodidad','fisico'].forEach(function(k){f[k]=+f[k]||0});
+    resetWiz(); wiz.review=true;
     show('new');
   }});
 }

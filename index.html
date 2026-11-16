@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Diario de Pádel</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon-180.png?v=12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pádel">
@@ -533,7 +533,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v11';
+var VERSION='v12';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];

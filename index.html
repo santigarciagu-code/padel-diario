@@ -104,7 +104,6 @@ input,textarea,select{font-size:16px}
 </head>
 <body>
 <h1>🎾 Diario de Pádel</h1>
-<div class="sub" id="sub"></div>
 <div id="status"></div>
 
 <section id="v-new"></section>
@@ -570,7 +569,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v17';
+var VERSION='v18';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];
@@ -605,7 +604,6 @@ function importar(ev){
 }
 
 function render(){
-  $('#sub').textContent='Tus datos se guardan en este móvil';
   renderNew(); renderHist(); renderRep(); renderCfg();
 }
 init();

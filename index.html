@@ -91,7 +91,7 @@ input,textarea,select{font-size:16px}
 .mb span:last-child{text-align:right;color:var(--ink)}
 .lugar{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
 .lugar:first-of-type{border-top:0}
-.tb{display:grid;grid-template-columns:78px 1fr 24px;align-items:center;gap:8px;margin:7px 0;font-size:15px}.tb i{display:block;height:12px;border-radius:8px;background:var(--line);overflow:hidden}.tb u{display:block;height:100%;background:var(--acc);border-radius:8px;min-width:0}.tb b{text-align:right}
+.tb{display:grid;grid-template-columns:128px 1fr 24px;align-items:center;gap:8px;margin:7px 0;font-size:15px}.tb i{display:block;height:12px;border-radius:8px;background:var(--line);overflow:hidden}.tb u{display:block;height:100%;background:var(--acc);border-radius:8px;min-width:0}.tb b{text-align:right}
 .chip svg.mini{width:22px;height:30px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;flex:none}
 .chip.on svg.mini{fill:rgba(255,255,255,.25)}
 .prow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
@@ -132,7 +132,8 @@ var pEdit = null;
 var editRow = null;
 var charts = {};
 var FORMAS = ['Redonda','Lágrima','Diamante','Híbrida'];
-var TRAB = ['Saque','Volea','Bandeja','Víbora','Remate','Defensa','Globo','Físico','Táctica'];
+var TRAB = ['Saque','Volea','Bandeja y víbora','Remate','Defensa','Globo','Físico','Táctica'];
+function normTrab(s){var o=[];String(s||'').split(',').forEach(function(x){x=x.trim(); if(x==='Bandeja'||x==='Víbora')x='Bandeja y víbora'; if(x&&o.indexOf(x)<0)o.push(x)});return o}
 var DUR = [45,60,90,120,150];
 var EMO = ['😖','😕','😐','🙂','🤩'];
 var f = blank();
@@ -334,7 +335,7 @@ function act(a,v,n){
   if(a==='back') return backStep();
   if(a==='repeat'){
     var l=lastRow(); if(!l) return;
-    f=Object.assign(blank(),{tipo:l.tipo,pala:l.pala,forma:l.forma,pista:l.pista,duracion:+l.duracion||90,lugar:l.tipo==='Entrenamiento'?(l.lugar||''):'',trabajado:l.tipo==='Entrenamiento'?String(l.trabajado||'').split(',').map(function(x){return x.trim()}).filter(Boolean):[]});
+    f=Object.assign(blank(),{tipo:l.tipo,pala:l.pala,forma:l.forma,pista:l.pista,duracion:+l.duracion||90,lugar:l.tipo==='Entrenamiento'?(l.lugar||''):'',trabajado:l.tipo==='Entrenamiento'?normTrab(l.trabajado):[]});
     resetWiz(); wiz.review=true; status('⚡ Copiado del último. Pon el resultado y cambia lo que haga falta.','ok'); renderNew(); window.scrollTo(0,0); return;
   }
   if(a==='tipo'){
@@ -401,7 +402,7 @@ function renderHist(){
   $('#v-hist').innerHTML=h;
   document.querySelectorAll('#v-hist .row').forEach(function(el){el.onclick=function(){
     var r=rows.filter(function(x){return x.row==el.dataset.row})[0]; if(!r)return;
-    editRow=r.row; f=Object.assign(blank(),r,{trabajado:String(r.trabajado||'').split(',').map(function(s){return s.trim()}).filter(Boolean),fecha:String(r.fecha).slice(0,10)});
+    editRow=r.row; f=Object.assign(blank(),r,{trabajado:normTrab(r.trabajado),fecha:String(r.fecha).slice(0,10)});
     ['duracion','control','potencia','comodidad','fisico'].forEach(function(k){f[k]=+f[k]||0});
     resetWiz(); wiz.review=true;
     show('new');
@@ -475,7 +476,7 @@ function entrenoHtml(){
   var t=rows.filter(function(r){return r.tipo==='Entrenamiento'});
   if(!t.length) return '<div class="card"><h3>🏋️ Entrenamientos</h3><div class="sub" style="margin:0">Todavía no has registrado entrenamientos.</div></div>';
   var cnt={}; TRAB.forEach(function(k){cnt[k]=0});
-  t.forEach(function(r){String(r.trabajado||'').split(',').forEach(function(x){x=x.trim(); if(x in cnt)cnt[x]++})});
+  t.forEach(function(r){normTrab(r.trabajado).forEach(function(x){if(x in cnt)cnt[x]++})});
   var sin=TRAB.filter(function(k){return !cnt[k]});
   var lug={}; t.forEach(function(r){if(r.lugar)lug[r.lugar]=(lug[r.lugar]||0)+1});
   var lk=Object.keys(lug).sort(function(a,b){return lug[b]-lug[a]});
@@ -569,7 +570,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v14';
+var VERSION='v15';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];

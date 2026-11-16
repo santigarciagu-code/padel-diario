@@ -132,7 +132,7 @@ var pEdit = null;
 var editRow = null;
 var charts = {};
 var FORMAS = ['Redonda','Lágrima','Diamante','Híbrida'];
-var TRAB = ['Saque','Volea','Bandeja','Víbora','Remate','Pared','Defensa','Globo','Físico','Táctica'];
+var TRAB = ['Saque','Volea','Bandeja','Víbora','Remate','Defensa','Globo','Físico','Táctica'];
 var DUR = [45,60,90,120,150];
 var EMO = ['😖','😕','😐','🙂','🤩'];
 var f = blank();
@@ -569,7 +569,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v13';
+var VERSION='v14';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];

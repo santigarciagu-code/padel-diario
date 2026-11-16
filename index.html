@@ -132,8 +132,8 @@ var pEdit = null;
 var editRow = null;
 var charts = {};
 var FORMAS = ['Redonda','Lágrima','Diamante','Híbrida'];
-var TRAB = ['Saque','Volea','Bandeja y víbora','Remate','Defensa','Globo','Físico','Táctica'];
-function normTrab(s){var o=[];String(s||'').split(',').forEach(function(x){x=x.trim(); if(x==='Bandeja'||x==='Víbora')x='Bandeja y víbora'; if(x&&o.indexOf(x)<0)o.push(x)});return o}
+var TRAB = ['Saque','Volea','Bandeja / víbora','Remate','Defensa','Globo','Físico','Táctica'];
+function normTrab(s){var o=[];String(s||'').split(',').forEach(function(x){x=x.trim(); if(x==='Bandeja'||x==='Víbora')x='Bandeja / víbora'; if(x&&o.indexOf(x)<0)o.push(x)});return o}
 var DUR = [45,60,90,120,150];
 var EMO = ['😖','😕','😐','🙂','🤩'];
 var f = blank();
@@ -570,7 +570,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v15';
+var VERSION='v16';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];

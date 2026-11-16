@@ -164,7 +164,7 @@ function dbPut(o,st){return tx('readwrite',function(s){return s.put(o)},st)}
 function dbDel(id,st){return tx('readwrite',function(s){return s.delete(id)},st)}
 function dbClear(){return tx('readwrite',function(s){return s.clear()})}
 
-function status(msg,cls){ $('#status').innerHTML = msg?'<div class="bar '+cls+'">'+msg+'</div>':''; }
+function status(msg,cls){ $('#status').innerHTML = msg?'<div class="bar '+cls+'">'+msg+'</div>':''; if(msg&&(cls==='warn'||cls==='err')) window.scrollTo(0,0); }
 function backupInfo(){
   var lb=LS.get('padel_backup',{n:0,t:''});
   var sin=rows.length-lb.n;
@@ -235,8 +235,8 @@ function fechaBonita(iso){var p=String(iso).slice(0,10).split('-');return p.leng
 function grab(){
   ['lugar','marcador','pala','con','notas'].forEach(function(id){var e=document.getElementById(id); if(e) f[id]=e.value;});
 }
-function nextStep(){
-  grab();
+function nextStep(noGrab){
+  if(!noGrab) grab();
   if(wiz.edit){wiz.edit=null;renderNew();return}
   var st=stepsFor(); wiz.i++;
   if(st[wiz.i]==='forma'&&wiz.auto&&f.forma) wiz.i++;
@@ -328,7 +328,7 @@ function renderNew(){
   var m=$('#v-new');
   m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) act(b.dataset.a,b.dataset.v,b.dataset.n)};
   var sv=$('#save'); if(sv) sv.onclick=save;
-  var d=document.getElementById('fecha'); if(d&&st==='fecha') d.onchange=function(){ if(d.value){f.fecha=d.value; nextStep()} };
+  var d=document.getElementById('fecha'); if(d&&st==='fecha') d.onchange=function(){ if(d.value){f.fecha=d.value; nextStep(true)} };
 }
 function act(a,v,n){
   if(a==='back') return backStep();
@@ -340,19 +340,19 @@ function act(a,v,n){
   if(a==='tipo'){
     var l0=editRow?null:lastRow();
     if(l0&&!f.pista){f.pista=l0.pista||'';f.duracion=+l0.duracion||f.duracion}
-    f.tipo=v; if(v==='Entrenamiento'){f.resultado='';f.marcador=''}else{f.lugar='';f.trabajado=[]} return nextStep(); }
-  if(a==='dia'){ f.fecha=v; return nextStep(); }
-  if(a==='res'){ f.resultado=v; return nextStep(); }
-  if(a==='lugarchip'){ f.lugar=v; return nextStep(); }
+    f.tipo=v; if(v==='Entrenamiento'){f.resultado='';f.marcador=''}else{f.lugar='';f.trabajado=[]} return nextStep(true); }
+  if(a==='dia'){ f.fecha=v; return nextStep(true); }
+  if(a==='res'){ f.resultado=v; return nextStep(true); }
+  if(a==='lugarchip'){ f.lugar=v; return nextStep(true); }
   if(a==='palachip'){
     f.pala=v; var last=rows.filter(function(r){return r.pala===v}).sort(function(x,y){return String(y.fecha).localeCompare(String(x.fecha))})[0];
     if(last&&last.forma){f.forma=last.forma;wiz.auto=true}
-    return nextStep();
+    return nextStep(true);
   }
-  if(a==='mipala'){ var mp=misPalas.filter(function(p){return String(p.id)===String(v)})[0]; if(!mp)return; f.pala=mp.nombre; if(mp.forma){f.forma=mp.forma;wiz.auto=true} return nextStep(); }
-  if(a==='forma'){ f.forma=v; wiz.auto=false; return nextStep(); }
-  if(a==='pista'){ f.pista=v; return nextStep(); }
-  if(a==='dur'){ f.duracion=+v; return nextStep(); }
+  if(a==='mipala'){ var mp=misPalas.filter(function(p){return String(p.id)===String(v)})[0]; if(!mp)return; f.pala=mp.nombre; if(mp.forma){f.forma=mp.forma;wiz.auto=true} return nextStep(true); }
+  if(a==='forma'){ f.forma=v; wiz.auto=false; return nextStep(true); }
+  if(a==='pista'){ f.pista=v; return nextStep(true); }
+  if(a==='dur'){ f.duracion=+v; return nextStep(true); }
   if(a==='trab'){ var i=f.trabajado.indexOf(v); if(i>=0)f.trabajado.splice(i,1); else f.trabajado.push(v); return renderNew(); }
   if(a==='sc'){ f[n]=+v; return renderNew(); }
   if(a==='edit'){ grab(); wiz.edit=v; return renderNew(); }
@@ -533,7 +533,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v10';
+var VERSION='v11';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];

@@ -450,7 +450,7 @@ function palasHtml(g){
     });
     h+='<div class="pv" style="color:'+(d.pct==null?'var(--mut)':d.pct>=50?'var(--acc)':'var(--bad)')+'"><b>'+(d.pct==null?'–':d.pct+'%')+'</b><small>'+d.w+'/'+d.gm+'</small></div>';
   });
-  h+='</div><div class="sub" style="margin:10px 0 0">Verde más oscuro = mejor nota (de 1 a 5). El borde negro marca la mejor pala en esa sensación (si no hay empate). ⭐ = mejor % de victorias.</div></div>';
+  h+='</div></div>';
   return h;
 }
 function trabBars(cnt,n){
@@ -556,7 +556,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v20';
+var VERSION='v21';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];

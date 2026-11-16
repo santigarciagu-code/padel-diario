@@ -98,6 +98,15 @@ input,textarea,select{font-size:16px}
 .prow:first-of-type{border-top:0}
 .prow svg{width:22px;height:30px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;flex:none}
 .prow span.n{flex:1;font-size:16px}
+.pt{display:grid;grid-template-columns:minmax(0,2.5fr) repeat(4,minmax(0,1fr)) minmax(0,1.15fr);gap:5px;align-items:stretch;margin-top:6px}
+.ph{font-size:10px;color:var(--mut);text-align:center;padding-bottom:2px;align-self:end}
+.pn{display:flex;align-items:center;gap:6px;min-width:0;padding:4px 0}
+.pn b{display:block;font-size:12.5px;line-height:1.15;overflow-wrap:break-word;word-break:normal}
+.pn small,.pv small{display:block;font-size:10px;color:var(--mut);font-weight:400}
+.pi{width:14px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.pcell{display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:14px;font-weight:600;min-height:44px;border:2px solid transparent;color:var(--ink)}
+.pcell.top{border-color:var(--ink)}
+.pv{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:15px}
 .hide{display:none}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style>
@@ -411,34 +420,15 @@ function renderHist(){
 function avg(a){return a.length?a.reduce(function(x,y){return x+(+y||0)},0)/a.length:0}
 function mk(id,cfgc){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),cfgc); }
 function mbar(lbl,v){return '<div class="mb"><span>'+lbl+'</span><i><u style="width:'+Math.round(100*(v||0)/5)+'%"></u></i><span>'+(v?v.toFixed(1):'–')+'</span></div>'}
-var PCOL=['#1f9d55','#3b6fe0','#e0903b','#9a57d6','#d64545','#12a8b8'];
-function radarSvg(series){
-  var cx=110,cy=92,R=56,ax=[[0,-1],[1,0],[0,1],[-1,0]];
-  var g='';
-  [1,2,3,4,5].forEach(function(k){var r=R*k/5;g+='<polygon points="'+ax.map(function(a){return (cx+a[0]*r)+','+(cy+a[1]*r)}).join(' ')+'" fill="none" style="stroke:var(--line)" stroke-width="1"/>'});
-  ax.forEach(function(a){g+='<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+a[0]*R)+'" y2="'+(cy+a[1]*R)+'" style="stroke:var(--line)" stroke-width="1"/>'});
-  g+='<g style="fill:var(--mut)" font-size="11" font-family="-apple-system,system-ui,sans-serif">'+
-    '<text x="'+cx+'" y="'+(cy-R-8)+'" text-anchor="middle">Control</text>'+
-    '<text x="'+(cx+R+8)+'" y="'+(cy+4)+'">Potencia</text>'+
-    '<text x="'+cx+'" y="'+(cy+R+18)+'" text-anchor="middle">Comodidad</text>'+
-    '<text x="'+(cx-R-8)+'" y="'+(cy+4)+'" text-anchor="end">Físico</text></g>';
-  series.forEach(function(se){
-    var pts=se.vals.map(function(v,i){var r=R*Math.max(0,Math.min(5,v||0))/5;return (cx+ax[i][0]*r).toFixed(1)+','+(cy+ax[i][1]*r).toFixed(1)}).join(' ');
-    g+='<polygon points="'+pts+'" fill="'+se.color+'" fill-opacity="'+(series.length>1?.18:.3)+'" stroke="'+se.color+'" stroke-width="2.5" stroke-linejoin="round"/>';
-    if(series.length===1) se.vals.forEach(function(v,i){var r=R*(v||0)/5;g+='<circle cx="'+(cx+ax[i][0]*r)+'" cy="'+(cy+ax[i][1]*r)+'" r="3.5" fill="'+se.color+'"/>'});
-  });
-  return '<svg viewBox="0 0 220 184" style="width:100%;max-width:260px;display:block;margin:0 auto">'+g+'</svg>';
-}
-function donut(pct,color){
-  var r=26,c=2*Math.PI*r,d=(pct||0)/100*c;
-  return '<svg viewBox="0 0 70 70" style="width:78px;height:78px;display:block;margin:0 auto"><circle cx="35" cy="35" r="'+r+'" fill="none" style="stroke:var(--line)" stroke-width="9"/>'+
-    (d<1?'':'<circle cx="35" cy="35" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="9" stroke-linecap="round" stroke-dasharray="'+d.toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 35 35)"/>')+
-    '<text x="35" y="40" text-anchor="middle" font-size="15" font-weight="700" style="fill:var(--ink)" font-family="-apple-system,system-ui,sans-serif">'+(pct==null?'–':pct+'%')+'</text></svg>';
+function heat(v){
+  if(!v) return 'background:var(--line)';
+  var a=(0.12+Math.max(0,Math.min(5,v)-1)/4*0.68).toFixed(2);
+  return 'background:rgba(31,157,85,'+a+')';
 }
 function palasHtml(g){
   var names=palas().filter(function(p){return rows.some(function(r){return r.pala===p})});
   if(!names.length) return '';
-  var data=names.map(function(p,i){
+  var data=names.map(function(p){
     var all=rows.filter(function(r){return r.pala===p});
     var gm=g.filter(function(r){return r.pala===p});
     var w=gm.filter(function(r){return r.resultado==='Victoria'}).length;
@@ -447,23 +437,20 @@ function palasHtml(g){
     var vals=[sens('control'),sens('potencia'),sens('comodidad'),sens('fisico')];
     return {p:p,n:all.length,gm:gm.length,w:w,pct:gm.length?Math.round(100*w/gm.length):null,vals:vals,forma:last.forma,nota:avg(vals)};
   }).sort(function(a,b){return b.nota-a.nota});
-  data.forEach(function(d,i){d.color=PCOL[i%PCOL.length]});
   var best=data.filter(function(d){return d.gm>=2}).sort(function(a,b){return (b.pct-a.pct)||(b.nota-a.nota)})[0];
-  var NM=['Control','Potencia','Comodidad','Físico'];
-  var h='<div class="card"><h3>🎾 Tus palas</h3>';
-  if(data.length>=2){
-    h+='<div class="sub" style="margin:0 0 4px">Comparación de sensaciones (cuanto más lejos del centro, mejor)</div>'+radarSvg(data.slice(0,6).map(function(d){return {vals:d.vals,color:d.color}}))+
-      '<div class="chips" style="justify-content:center;margin:6px 0 4px">'+data.slice(0,6).map(function(d){return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px"><i style="width:12px;height:12px;border-radius:4px;background:'+d.color+';display:inline-block"></i>'+esc(d.p)+'</span>'}).join('')+'</div>';
-  }
-  h+=data.map(function(d){
-    var mx=d.vals.indexOf(Math.max.apply(null,d.vals)), mn=d.vals.indexOf(Math.min.apply(null,d.vals));
-    var sh=SHAPES[d.forma]?'<svg viewBox="0 0 40 56" style="width:34px;height:48px;flex:none;stroke:'+d.color+';fill:'+d.color+'33;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"><path d="'+SHAPES[d.forma]+'"/><path d="M20 38 V54"/></svg>':'';
-    return '<div class="pc" style="border-left:5px solid '+d.color+'"><div class="hd">'+sh+'<div><div class="nm">'+esc(d.p)+(best&&best.p===d.p?'<span class="star">⭐ mejor</span>':'')+'</div><div class="st">'+esc(d.forma||'')+' · '+d.n+' sesiones</div></div></div>'+
-      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px"><div style="flex:1 1 170px;min-width:0">'+radarSvg([{vals:d.vals,color:d.color}])+'</div>'+
-      '<div style="flex:0 0 100px;text-align:center">'+donut(d.pct,d.color)+'<div class="st" style="margin-top:4px">'+d.w+' de '+d.gm+' victorias</div></div></div>'+
-      '<div class="chips" style="margin-top:8px;gap:6px">'+d.vals.map(function(v,i){return '<span class="pill" style="'+(i===mx?'':'background:var(--line);color:var(--ink)')+'">'+NM[i]+' '+v.toFixed(1)+'</span>'}).join('')+'</div>'+
-      '<div class="st" style="margin-top:8px">💪 Punto fuerte: <b>'+NM[mx]+'</b> · 🔧 A mejorar: <b>'+NM[mn]+'</b></div></div>';
-  }).join('')+'</div>';
+  var mx=[0,1,2,3].map(function(i){return Math.max.apply(null,data.map(function(d){return d.vals[i]}))});
+  var H=['Control','Potencia','Comod.','Físico','Victorias'];
+  var h='<div class="card"><h3>🎾 Tus palas</h3><div class="pt">'+
+    '<div class="ph"></div>'+H.map(function(x){return '<div class="ph">'+x+'</div>'}).join('');
+  data.forEach(function(d){
+    var sh=SHAPES[d.forma]?'<svg viewBox="0 0 40 56" class="pi"><path d="'+SHAPES[d.forma]+'"/><path d="M20 38 V54"/></svg>':'';
+    h+='<div class="pn">'+sh+'<div><b>'+esc(d.p)+(best&&best.p===d.p?' ⭐':'')+'</b><small>'+esc(d.forma||'')+'</small></div></div>';
+    d.vals.forEach(function(v,i){
+      h+='<div class="pcell'+(v&&v===mx[i]&&data.length>1&&data.filter(function(x){return x.vals[i]===mx[i]}).length===1?' top':'')+'" style="'+heat(v)+'">'+(v?v.toFixed(1):'–')+'</div>';
+    });
+    h+='<div class="pv" style="color:'+(d.pct==null?'var(--mut)':d.pct>=50?'var(--acc)':'var(--bad)')+'"><b>'+(d.pct==null?'–':d.pct+'%')+'</b><small>'+d.w+'/'+d.gm+'</small></div>';
+  });
+  h+='</div><div class="sub" style="margin:10px 0 0">Verde más oscuro = mejor nota (de 1 a 5). El borde negro marca la mejor pala en esa sensación (si no hay empate). ⭐ = mejor % de victorias.</div></div>';
   return h;
 }
 function trabBars(cnt,n){
@@ -569,7 +556,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v18';
+var VERSION='v20';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];

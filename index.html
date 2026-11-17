@@ -496,7 +496,6 @@ function renderRep(){
   var h='<div class="kpis"><div class="kpi"><b>'+g.length+'</b><span>partidos</span></div><div class="kpi"><b>'+(g.length?Math.round(100*w/g.length):0)+'%</b><span>victorias</span></div><div class="kpi"><b>'+hrs.toFixed(1)+'</b><span>horas</span></div></div>'+
     palasHtml(g)+entrenoHtml()+'<div class="card"><h3>% victorias por forma de pala</h3><canvas id="c1"></canvas></div>'+
     
-    '<div class="card"><h3>Victoria vs derrota: sensaciones</h3><canvas id="c3"></canvas></div>'+
     mesesHtml();
   $('#v-rep').innerHTML=h;
   if(!rows.length||typeof Chart==='undefined') return;
@@ -504,8 +503,6 @@ function renderRep(){
   Chart.defaults.color=ink;
   var G='#1f9d55',B='#3b6fe0',O='#e0903b',P='#9a57d6';
   mk('c1',{type:'bar',data:{labels:FORMAS,datasets:[{label:'% victorias',backgroundColor:G,data:FORMAS.map(function(s){var x=g.filter(function(r){return r.forma===s});return x.length?Math.round(100*x.filter(function(r){return r.resultado==='Victoria'}).length/x.length):0})}]},options:{scales:{y:{max:100,beginAtZero:true}},plugins:{legend:{display:false}}}});
-  var V=g.filter(function(r){return r.resultado==='Victoria'}),D=g.filter(function(r){return r.resultado==='Derrota'});
-  mk('c3',{type:'bar',data:{labels:['Control','Potencia','Comodidad','Físico'],datasets:[{label:'Victoria',backgroundColor:G,data:['control','potencia','comodidad','fisico'].map(function(k){return +avg(V.map(function(r){return r[k]})).toFixed(2)})},{label:'Derrota',backgroundColor:'#d64545',data:['control','potencia','comodidad','fisico'].map(function(k){return +avg(D.map(function(r){return r[k]})).toFixed(2)})}]},options:{scales:{y:{max:5,beginAtZero:true}}}});
 }
 
 function palasCfgHtml(){
@@ -568,7 +565,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v23';
+var VERSION='v24';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];

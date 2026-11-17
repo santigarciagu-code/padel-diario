@@ -108,6 +108,20 @@ input,textarea,select{font-size:16px}
 .pcell.top{border-color:var(--ink)}
 .pv{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:15px}
 .ver{font-size:11px;font-weight:600;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:2px 8px;vertical-align:middle;margin-left:6px;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px}
+.tile b{display:block;font-size:26px;line-height:1.1}
+.tile span{display:block;font-size:12px;color:var(--mut);margin-top:2px}
+.tile small{display:block;font-size:11px;color:var(--mut);margin-top:4px}
+.stp{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 12px}
+.stp button{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-size:22px;cursor:pointer}
+.stp div{text-align:center;font-size:14px;color:var(--mut)}.stp div b{display:block;font-size:30px;color:var(--ink)}
+.seg{display:flex;gap:6px;margin:6px 0 8px}
+.seg i{flex:1;height:14px;border-radius:7px;background:var(--line)}.seg i.on{background:var(--acc)}
+.wk{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:10px}
+.wk div{text-align:center;font-size:10px;color:var(--mut)}
+.wk u{display:flex;align-items:center;justify-content:center;height:34px;border-radius:9px;text-decoration:none;font-size:14px;font-weight:700;color:var(--ink);background:var(--line);margin-bottom:3px}
+.wk u.part{background:rgba(31,157,85,.35)}.wk u.ok{background:var(--acc);color:#fff}.wk u.now{border:2px solid var(--ink)}
 .hide{display:none}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style>
@@ -488,16 +502,60 @@ function mesesHtml(){
     return '<div style="display:grid;grid-template-columns:48px 1fr 26px;align-items:center;gap:8px;margin:10px 0"><span style="color:var(--mut);font-size:14px">'+lab+'</span><div style="display:flex;height:30px;border-radius:9px;overflow:hidden;width:'+Math.round(100*t/mx)+'%;min-width:30px">'+seg(x.p,'#1f9d55')+seg(x.e,'#3b6fe0')+'</div><b>'+t+'</b></div>';
   }).join('')+'<div style="display:flex;gap:16px;margin-top:8px;font-size:13px">'+dot('#1f9d55','Partidos')+dot('#3b6fe0','Entrenos')+'</div></div>';
 }
+function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function parseIso(iso){var p=String(iso).slice(0,10).split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+function weekStart(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+function getGoal(){var g=+LS.get('padel_goal',3);return g>=1&&g<=14?g:3}
+function setGoal(n){LS.set('padel_goal',Math.max(1,Math.min(14,n)))}
+function constanciaHtml(g){
+  var G=getGoal();
+  var wk={}; rows.forEach(function(r){var d=parseIso(r.fecha); if(isNaN(d))return; var k=isoOf(weekStart(d)); wk[k]=(wk[k]||0)+1});
+  var now=weekStart(new Date()), nowK=isoOf(now);
+  var cur=wk[nowK]||0;
+  // semana a semana desde la primera hasta la actual
+  var keys=Object.keys(wk).sort(), seq=[];
+  if(keys.length){var d=parseIso(keys[0]); while(d<=now){seq.push(wk[isoOf(d)]||0); d.setDate(d.getDate()+7)}}
+  var best=0,run=0; seq.forEach(function(c){run=c>=G?run+1:0; if(run>best)best=run});
+  var arr=seq.slice(); if(arr.length&&arr[arr.length-1]<G) arr.pop();
+  var curRun=0; for(var i=arr.length-1;i>=0&&arr[i]>=G;i--) curRun++;
+  var bestWeek=seq.length?Math.max.apply(null,seq):0;
+  // últimas 8 semanas
+  var cells=''; for(var j=7;j>=0;j--){var d2=new Date(now);d2.setDate(now.getDate()-7*j);var c=wk[isoOf(d2)]||0;
+    cells+='<div><u class="'+(c>=G?'ok':c>0?'part':'')+(j===0?' now':'')+'">'+(c||'')+'</u>'+d2.getDate()+'/'+(d2.getMonth()+1)+'</div>'}
+  var segs=''; for(var k2=0;k2<Math.max(G,cur);k2++) segs+='<i class="'+(k2<cur?'on':'')+'"></i>';
+  var msg=cur>=G?'🎉 ¡Objetivo de la semana cumplido!':(cur===0?'Todavía no has registrado nada esta semana.':'Te falta'+(G-cur===1?' 1 sesión':' '+(G-cur)+' sesiones')+' para tu objetivo.');
+  var c1='<div class="card"><h3>🎯 Objetivo semanal</h3>'+
+    '<div class="stp"><button data-g="-1" aria-label="Menos">−</button><div><b>'+G+'</b>sesiones por semana</div><button data-g="1" aria-label="Más">+</button></div>'+
+    '<div style="font-size:15px"><b>Esta semana: '+cur+' de '+G+'</b></div><div class="seg">'+segs+'</div><div class="sub" style="margin:0">'+msg+'</div>'+
+    '<div class="sub" style="margin:14px 0 0">Últimas 8 semanas (verde = objetivo cumplido)</div><div class="wk">'+cells+'</div></div>';
+  // rachas y récords
+  var gs=g.slice().sort(function(a,b){return String(a.fecha).localeCompare(String(b.fecha))||((a.id||0)-(b.id||0))});
+  var bw=0,rw=0; gs.forEach(function(r){rw=r.resultado==='Victoria'?rw+1:0; if(rw>bw)bw=rw});
+  var cw=0; for(var q=gs.length-1;q>=0&&gs[q].resultado==='Victoria';q--) cw++;
+  var MS=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var mo={}; rows.forEach(function(r){var k=String(r.fecha).slice(0,7); if(k.length===7)mo[k]=(mo[k]||0)+1});
+  var mk2=Object.keys(mo).sort(function(a,b){return mo[b]-mo[a]||b.localeCompare(a)})[0];
+  var pl=palas().map(function(n){var gm=g.filter(function(r){return r.pala===n});var w=gm.filter(function(r){return r.resultado==='Victoria'}).length;return {n:n,gm:gm.length,pct:gm.length?Math.round(100*w/gm.length):0}}).filter(function(x){return x.gm>=2}).sort(function(a,b){return b.pct-a.pct||b.gm-a.gm})[0];
+  var tile=function(big,lab,sub){return '<div class="tile"><b>'+big+'</b><span>'+lab+'</span>'+(sub?'<small>'+sub+'</small>':'')+'</div>'};
+  var c2='<div class="card"><h3>🔥 Rachas y récords</h3><div class="tiles">'+
+    tile(cw,'victorias seguidas','Mejor racha: '+bw)+
+    tile(curRun,'semanas cumpliendo objetivo','Mejor racha: '+best)+
+    tile(bestWeek,'sesiones en tu mejor semana','')+
+    tile(mk2?mo[mk2]:0,'sesiones en tu mejor mes',mk2?MS[+mk2.slice(5)-1]+' '+mk2.slice(0,4):'')+
+    '<div class="tile" style="grid-column:1/-1"><b style="font-size:20px">'+(pl?'⭐ '+esc(pl.n):'—')+'</b><span>pala estrella'+(pl?' · '+pl.pct+'% de victorias en '+pl.gm+' partidos':' (hacen falta 2 partidos con una pala)')+'</span></div></div></div>';
+  return c1+c2;
+}
 function renderRep(){
   var g=rows.filter(function(r){return r.tipo!=='Entrenamiento'});
   var w=g.filter(function(r){return r.resultado==='Victoria'}).length;
   var tr=rows.length-g.length;
   var hrs=rows.reduce(function(a,r){return a+(+r.duracion||0)},0)/60;
   var h='<div class="kpis"><div class="kpi"><b>'+g.length+'</b><span>partidos</span></div><div class="kpi"><b>'+(g.length?Math.round(100*w/g.length):0)+'%</b><span>victorias</span></div><div class="kpi"><b>'+hrs.toFixed(1)+'</b><span>horas</span></div></div>'+
-    palasHtml(g)+entrenoHtml()+'<div class="card"><h3>% victorias por forma de pala</h3><canvas id="c1"></canvas></div>'+
+    constanciaHtml(g)+palasHtml(g)+entrenoHtml()+'<div class="card"><h3>% victorias por forma de pala</h3><canvas id="c1"></canvas></div>'+
     
     mesesHtml();
   $('#v-rep').innerHTML=h;
+  $('#v-rep').onclick=function(e){var b=e.target.closest('[data-g]'); if(b){setGoal(getGoal()+(+b.dataset.g)); renderRep();}};
   if(!rows.length||typeof Chart==='undefined') return;
   var ink=getComputedStyle(document.body).color;
   Chart.defaults.color=ink;
@@ -565,7 +623,7 @@ function renderCfg(){
   var m=$('#v-cfg'); m.onclick=function(e){var b=e.target.closest('[data-a]'); if(b) cfgAct(b.dataset.a,b.dataset.v)};
   $('#upd').onclick=actualizar; $('#bk').onclick=exportar; $('#rf').onchange=importar;
 }
-var VERSION='v24';
+var VERSION='v25';
 function actualizar(){
   status('Actualizando…','ok');
   var p=[];
@@ -574,7 +632,7 @@ function actualizar(){
   Promise.all(p).then(function(){location.replace(location.pathname+'?u='+Date.now())});
 }
 function exportar(){
-  var data=JSON.stringify({app:'padel-diario',version:2,partidos:rows.map(function(r){var o=Object.assign({},r);delete o.row;return o}),palas:misPalas.map(function(p){return {nombre:p.nombre,forma:p.forma,activa:p.activa!==false}})},null,1);
+  var data=JSON.stringify({app:'padel-diario',version:2,objetivo:getGoal(),partidos:rows.map(function(r){var o=Object.assign({},r);delete o.row;return o}),palas:misPalas.map(function(p){return {nombre:p.nombre,forma:p.forma,activa:p.activa!==false}})},null,1);
   var stamp=new Date().toISOString().slice(0,10);
   var file=new File([data],'padel-diario-'+stamp+'.json',{type:'application/json'});
   function done(){LS.set('padel_backup',{n:rows.length,t:new Date().toLocaleString('es-ES')});status('','');load();}
@@ -591,6 +649,7 @@ function importar(ev){
     var sig=function(r){return [r.fecha,r.pala,r.tipo,r.duracion,r.control,r.potencia,r.comodidad,r.fisico,r.creado].join('|')};
     var have={}; rows.forEach(function(r){have[sig(r)]=1});
     var add=list.filter(function(r){return !have[sig(r)]});
+    if(j.objetivo) setGoal(+j.objetivo);
     var hp={}; misPalas.forEach(function(p){hp[p.nombre.toLowerCase()]=1});
     var addP=(j.palas||[]).filter(function(p){return p&&p.nombre&&!hp[p.nombre.toLowerCase()]});
     return add.reduce(function(p,r){var o=Object.assign({},r);delete o.id;delete o.row;return p.then(function(){return dbPut(o)})},Promise.resolve())
